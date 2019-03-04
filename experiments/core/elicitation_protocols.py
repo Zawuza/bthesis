@@ -1,6 +1,6 @@
-from voting_rules import CompleteProfileBordaSolver, borda_name
-from queries import CompareQuery
-from profile_helpers import IncompleteToCompleteProfileConverter
+from core.voting_rules import CompleteProfileBordaSolver, borda_name
+from core.queries import CompareQuery
+from core.profile_helpers import IncompleteToCompleteProfileConverter
 import random
 
 
@@ -17,6 +17,7 @@ class ElicitationProtocol:
 
         query_count = 0
         winner_time = False
+        query_voter_list = []
 
         while True:
             query, voter, winner_time = self.underlying_function()
@@ -24,14 +25,13 @@ class ElicitationProtocol:
                 winner = self.find_winner()
                 break
             voter_preferences = complete_profile[voter]
-            print(query, "to", voter, "with", voter_preferences)
+            query_voter_list.append((str(query), str(voter)))
             response = query.elicit_from(voter_preferences)
             self.elicitation_situation["P"][voter] = self.elicitation_situation["P"][voter].union(
                 response)
             query_count = query_count + 1
-            print(self.elicitation_situation)
 
-        return winner, query_count
+        return winner, query_voter_list, self.elicitation_situation["P"]
 
 
 class RandomPairwiseElicitationProtocol(ElicitationProtocol):
