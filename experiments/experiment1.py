@@ -23,10 +23,11 @@ def save_result_to_file(result):
         for preferences in elicitation_situation_profile:
             print("    ", preferences, file=f)
 
-alternatives = [{"a", "h"}, {"a", "b", "c"}]
+
 profile1 = [["a", "h"], ["h", "a"], ["h", "a"]]
 profile2 = [["a", "b", "c"], ["a", "b", "c"], ["a", "c", "b"]]
-profiles = [profile1, profile2]
+alternatives = [{"a","b","c"}]
+profiles = [profile2]
 
 random_pairwise = RandomPairwiseElicitationProtocol()
 test_experiment = Experiment(

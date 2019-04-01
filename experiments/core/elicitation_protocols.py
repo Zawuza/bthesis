@@ -1,4 +1,4 @@
-from core.voting_rules import CompleteProfileBordaSolver, borda_name
+from core.voting_rules import CompleteProfileBordaSolver, borda_name, IncompleteProfileBordaSolver
 from core.queries import CompareQuery
 from core.profile_helpers import IncompleteToCompleteProfileConverter
 import random
@@ -49,24 +49,23 @@ class ElicitationProtocol:
 
 class RandomPairwiseElicitationProtocol(ElicitationProtocol):
     def find_winner(self):
-        complete_profile = IncompleteToCompleteProfileConverter.convert(self.elicitation_situation["A"],
-                                                                        self.elicitation_situation["P"])
         if self.elicitation_situation["S"] == borda_name:
-            return CompleteProfileBordaSolver.find_winner(self.elicitation_situation["A"], complete_profile)
+            return IncompleteProfileBordaSolver.find_necessary_winner_if_exists(self.elicitation_situation["A"], self.elicitation_situation["P"])
 
     def underlying_function(self):
-        alternatives_list = list(self.elicitation_situation["A"]).copy()
-        random.shuffle(alternatives_list)
-        for alternative1 in alternatives_list:
-            for alternative2 in alternatives_list:
-                indexes = list(range(len(self.elicitation_situation["P"])))
-                random.shuffle(indexes)
-                for voter_index in indexes:
-                    voter_preferences = self.elicitation_situation["P"][voter_index]
-                    if alternative1 != alternative2:
-                        if not (((alternative1, alternative2) in voter_preferences) or ((alternative2, alternative1) in voter_preferences)):
-                            compare_query = CompareQuery(
-                                alternative1, alternative2)
-                            return compare_query, voter_index, False
+        if IncompleteProfileBordaSolver.find_necessary_winner_if_exists(self.elicitation_situation["A"], self.elicitation_situation["P"]) == None:   
+            alternatives_list = list(self.elicitation_situation["A"]).copy()
+            random.shuffle(alternatives_list)
+            for alternative1 in alternatives_list:
+                for alternative2 in alternatives_list:
+                    indexes = list(range(len(self.elicitation_situation["P"])))
+                    random.shuffle(indexes)
+                    for voter_index in indexes:
+                        voter_preferences = self.elicitation_situation["P"][voter_index]
+                        if alternative1 != alternative2:
+                            if not (((alternative1, alternative2) in voter_preferences) or ((alternative2, alternative1) in voter_preferences)):
+                                compare_query = CompareQuery(
+                                    alternative1, alternative2)
+                                return compare_query, voter_index, False
 
         return None, 0, True
