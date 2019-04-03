@@ -53,7 +53,8 @@ class RandomPairwiseElicitationProtocol(ElicitationProtocol):
             return IncompleteProfileBordaSolver.find_necessary_winner_if_exists(self.elicitation_situation["A"], self.elicitation_situation["P"])
 
     def underlying_function(self):
-        if IncompleteProfileBordaSolver.find_necessary_winner_if_exists(self.elicitation_situation["A"], self.elicitation_situation["P"]) == None:   
+        maybe_winner = IncompleteProfileBordaSolver.find_necessary_winner_if_exists(self.elicitation_situation["A"], self.elicitation_situation["P"])
+        if maybe_winner == None:   
             alternatives_list = list(self.elicitation_situation["A"]).copy()
             random.shuffle(alternatives_list)
             for alternative1 in alternatives_list:

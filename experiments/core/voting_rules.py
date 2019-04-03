@@ -38,31 +38,35 @@ class IncompleteProfileBordaSolver:
                 partial_vote = incomplete_profile[i]
                 for (x, y) in partial_vote:
                     if x == a:
-                        down[i].add(y)
+                        down_i = down[i].copy()
+                        down_i.add(y)
+                        down[i] = down_i
                     if y == a:
-                        up[i].add(x)
+                        up_i = up[i].copy()
+                        up_i.add(x)
+                        up[i] = up_i
             ups[a] = up
             downs[a] = down
         # Compare scores of alternatives
         for a in alternatives:
             a_necessary_winner = True
             for w in alternatives:
+                if a == w:
+                    continue
                 score_a = 0
                 score_w = 0
                 for i in range(len(incomplete_profile)):
                     partial_vote = incomplete_profile[i]
-                    if (w, a) in partial_vote:
+                    if not ((a, w) in partial_vote): #includes "unknown"
                         score_a += scores[len(alternatives) - len(downs[a][i]) - 1]
                         score_w += scores[len(ups[w][i])]
                     else:
                         # Dirty hack!!! (for normal, see paper)
-                        # Find a longest known chain between a and b and add difference to scores
-                        score_a += len(cls.longest_chain(a,w,partial_vote,alternatives))
-                a_necessary_winner = score_w > score_a
+                        score_a += len(ups[w][i].intersection(downs[a][i])) + 1
+                a_necessary_winner = (score_a >= score_w) & a_necessary_winner
             if not a_necessary_winner:
                 continue
             else:
                 return a
         
         return None
-
