@@ -71,4 +71,11 @@ class RandomPairwiseElicitationProtocol(ElicitationProtocol):
             return None, 0, True
             
 
+class CurrentSolutionHeuristicProtocol(ElicitationProtocol):
+    def find_winner(self):
+        return None 
+
+    def underlying_function(self):
+        return None, 0, True
+
         
