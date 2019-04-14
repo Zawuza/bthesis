@@ -54,19 +54,21 @@ class RandomPairwiseElicitationProtocol(ElicitationProtocol):
 
     def underlying_function(self):
         maybe_winner = IncompleteProfileBordaSolver.find_necessary_winner_if_exists(self.elicitation_situation["A"], self.elicitation_situation["P"])
-        if maybe_winner == None:   
-            alternatives_list = list(self.elicitation_situation["A"]).copy()
-            random.shuffle(alternatives_list)
-            for alternative1 in alternatives_list:
-                for alternative2 in alternatives_list:
-                    indexes = list(range(len(self.elicitation_situation["P"])))
-                    random.shuffle(indexes)
-                    for voter_index in indexes:
-                        voter_preferences = self.elicitation_situation["P"][voter_index]
-                        if alternative1 != alternative2:
-                            if not (((alternative1, alternative2) in voter_preferences) or ((alternative2, alternative1) in voter_preferences)):
-                                compare_query = CompareQuery(
-                                    alternative1, alternative2)
-                                return compare_query, voter_index, False
+        if maybe_winner == None:  
+            unknown_pairs_list = [] 
+            for voter_index in range(len(self.elicitation_situation["P"])):
+                voter_preferences = self.elicitation_situation["P"][voter_index]
+                for alternative1 in self.elicitation_situation["A"]:
+                    for alternative2 in self.elicitation_situation["A"]:
+                        if alternative1 == alternative2:
+                            continue
+                        if not (((alternative1, alternative2) in voter_preferences) or ((alternative2, alternative1) in voter_preferences)):
+                            unknown_pairs_list.append((voter_index, alternative1, alternative2))
+            random_triple = random.choice(unknown_pairs_list)
+            voter, a1, a2 = random_triple
+            return CompareQuery(a1, a2), voter, False
+        else:
+            return None, 0, True
+            
 
-        return None, 0, True
+        
