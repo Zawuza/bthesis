@@ -1,0 +1,29 @@
+-------------NEXT EXPERIMENT---------------------------------------------
+Winner: h
+
+Queries count: 3
+
+Queries:
+     ('compare{a,h}', '0')
+     ('compare{a,h}', '1')
+     ('compare{a,h}', '2')
+
+Partial profile from the last elicitation situation:
+     {('a', 'h')}
+     {('h', 'a')}
+     {('h', 'a')}
+-------------NEXT EXPERIMENT---------------------------------------------
+Winner: a
+
+Queries count: 4
+
+Queries:
+     ('compare{a,c}', '0')
+     ('compare{a,b}', '1')
+     ('compare{a,c}', '2')
+     ('compare{a,b}', '0')
+
+Partial profile from the last elicitation situation:
+     {('a', 'c'), ('a', 'b')}
+     {('a', 'b')}
+     {('a', 'c')}
