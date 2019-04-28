@@ -77,32 +77,44 @@ class CurrentSolutionHeuristicProtocol(ElicitationProtocol):
     def find_winner(self):
         return self.winner
 
-    def calculate_pairwise_maximal_regret(self, a, a_, incomplete_profile):
+    def calculate_sets(self, parial_vote, a, w):
+        A, B, C, D, E, F, G, U = set(), set(), set(), set(), set(), set(), set(), set()
+        for alternative in self.elicitation_situation["A"]:
+            if (alternative == a) or (alternative == w):
+                continue
+            above_a = (alternative, a) in parial_vote
+            above_w = (alternative, w) in parial_vote
+            under_a = (a, alternative) in parial_vote
+            under_w = (w, alternative) in parial_vote
+            if above_a and (not under_w) and (not above_w):
+                A.add(alternative)
+            if (under_a and above_w) or (above_a and under_w):
+                B.add(alternative)
+            if above_a and above_w:
+                C.add(alternative)
+            if above_w and (not above_a) and (not under_a):
+                D.add(alternative)
+            if under_a and (not under_w) and (not above_w):
+                E.add(alternative)
+            if under_a and under_w:
+                F.add(alternative)
+            if under_w and (not above_a) and (not above_w):
+                G.add(alternative)
+            if not (above_a or above_w or under_a or under_w):
+                U.add(alternative)
+        return A, B, C, D, E, F, G, U
+
+    def calculate_pairwise_maximal_regret(self, a, w, incomplete_profile):
         pmr = 0
         for vote in incomplete_profile:
-            if (a, a_) in vote:
-                for alternative in self.elicitation_situation["A"]:
-                    if (alternative == a) or (alternative == a_):
-                        continue
-                    if ((a, alternative) in vote) and ((alternative, a_) in vote):
-                        pmr -= 1
-                pmr -= 1
-            elif (a_, a) in vote:
-                pmr += len(self.elicitation_situation["A"]) - 1
-                for alternative in self.elicitation_situation["A"]:
-                    if (alternative == a) or (alternative == a_):
-                        continue
-                    if ((alternative, a_) in vote) or ((a, alternative) in vote):
-                        pmr -= 1
+            A, B, C, D, E, F, G, U = self.calculate_sets(vote, a, w)
+            if (a, w) in vote:
+                pmr -= len(B) + 1
+            elif (w, a) in vote:
+                pmr += len(self.elicitation_situation["A"]) - \
+                    1 - len(C) - len(D) - len(E) - len(F)
             else:
-                for alternative in self.elicitation_situation["A"]:
-                    if (alternative == a) or (alternative == a_):
-                        continue
-                    if (((alternative, a) in vote) and (not ((alternative, a_) in vote))) or\
-                        (((a_, alternative) in vote) and (not ((a, alternative) in vote))) or\
-                            (not (((a, alternative) in vote) or ((a_, alternative) in vote) or ((alternative, a) in vote) or ((alternative, a_) in vote))):
-                        pmr += 1
-                pmr += 1
+                pmr += len(D) + len(E) + len(U) + 1
         return pmr
 
     def calculate_max_regret(self, alternative):
