@@ -114,7 +114,7 @@ class CurrentSolutionHeuristicProtocol(ElicitationProtocol):
                 pmr += len(self.elicitation_situation["A"]) - \
                     1 - len(C) - len(D) - len(E) - len(F)
             else:
-                pmr += len(D) + len(E) + len(U) + 1
+                pmr += len(A) + len(G) + len(U) + 1
         return pmr
 
     def calculate_max_regret(self, alternative):
@@ -137,20 +137,19 @@ class CurrentSolutionHeuristicProtocol(ElicitationProtocol):
         potential_a2 = ""
         maxpotentials = ("", "")
         for vote in self.elicitation_situation["P"]:
+            A, B, C, D, E, F, G, U = self.calculate_sets(vote, a_star, w)
             if (a_star, w) in vote:
                 potential = 0
                 for a in self.elicitation_situation["A"]:
-                    if (a == a_star) or (a == w):
-                        continue
-                    if (((a_star, a) in vote) and (not((a, w) in vote))):
+                    if a in E:
                         potential += 1
                         potential_a1 = a
                         potential_a2 = w
-                    elif (((a, w) in vote) and (not((a_star, a) in vote))):
+                    elif a in D:
                         potential += 1
                         potential_a1 = a
                         potential_a2 = a_star
-                    elif ((not((a, w) in vote)) and (not((w, a)in vote)) and (not((a, a_star) in vote)) and (not((a_star, a) in vote))):
+                    elif a in U:
                         potential += 1
                         if (potential_a1 == "") and (potential_a2 == ""):
                             potential_a1 = a
@@ -158,31 +157,23 @@ class CurrentSolutionHeuristicProtocol(ElicitationProtocol):
             elif (w, a_star) in vote:
                 potential = 0
                 for a in self.elicitation_situation["A"]:
-                    if (a == a_star) or (a == w):
-                        continue
-                    if (((w, a) in vote) and (not((a, a_star) in vote))):
+                    if a in G:
                         potential += 1
                         potential_a1 = a
                         potential_a2 = a_star
-                    elif (((a, a_star) in vote) and (not((w, a) in vote))):
+                    elif a in A:
                         potential += 1
                         potential_a1 = w
                         potential_a2 = a
-                    elif ((not((a, w) in vote)) and (not((w, a)in vote)) and (not((a, a_star) in vote)) and (not((a_star, a) in vote))):
+                    elif a in U:
                         potential += 1
                         if (potential_a1 == "") and (potential_a2 == ""):
                             potential_a1 = a
                             potential_a2 = w
             else:
-                potential = 1
+                potential = 1  # Unknowness between a_star and w
                 for a in self.elicitation_situation["A"]:
-                    if (a == a_star) or (a == w):
-                        continue
-                    if (((a, a_star) in vote) and (not((a, w) in vote))):
-                        potential += 1
-                    elif (((w, a) in vote) and (not((a_star, a) in vote))):
-                        potential += 1
-                    elif ((not((a, w) in vote)) and (not((w, a)in vote)) and (not((a, a_star) in vote)) and (not((a_star, a) in vote))):
+                    if (a in A) or (a in G) or (a in U):
                         potential += 1
                 potential_a1 = a_star
                 potential_a2 = w
