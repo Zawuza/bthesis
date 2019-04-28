@@ -34,8 +34,8 @@ profile7 = [["ios", "windows", "android"],
 alternatives7 = {"ios", "windows", "android"}
 
 # Build dataset
-alternatives = [alternatives1, alternatives2]
-profiles = [profile1, profile2]
+alternatives = [alternatives3]
+profiles = [profile3]
 
 css_regret = CurrentSolutionHeuristicProtocol()
 test_experiment = Experiment(
