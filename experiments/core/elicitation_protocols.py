@@ -98,7 +98,7 @@ class CurrentSolutionHeuristicProtocol(ElicitationProtocol):
                 E.add(alternative)
             if under_a and under_w:
                 F.add(alternative)
-            if under_w and (not above_a) and (not above_w):
+            if under_w and (not above_a) and (not under_a):
                 G.add(alternative)
             if not (above_a or above_w or under_a or under_w):
                 U.add(alternative)
