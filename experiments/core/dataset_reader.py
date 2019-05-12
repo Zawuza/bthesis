@@ -13,5 +13,6 @@ def read_dataset(dataset_name, db_path):
         alternativs = set(profile[0])
         alternatives.append(alternativs)
         profiles.append((index,profile))
+    conn.commit()
     conn.close()
     return alternatives, profiles

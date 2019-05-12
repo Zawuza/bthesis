@@ -197,3 +197,7 @@ class CurrentSolutionHeuristicProtocol(ElicitationProtocol):
         else:
             self.winner = a_star
             return None, 0, True
+
+elicitation_protocols_global_dict = {}
+elicitation_protocols_global_dict["random_pairwise"] = RandomPairwiseElicitationProtocol
+elicitation_protocols_global_dict["current_solution_heuristic"] = CurrentSolutionHeuristicProtocol

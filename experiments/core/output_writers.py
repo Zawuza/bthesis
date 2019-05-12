@@ -34,6 +34,7 @@ def __save_result_to_db(db_path, table_name, result, index):
         str(query_voter_list) + "\",\"" + str(elicitation_situation_profile) + "\")"
     query = query1 + query2
     conn.execute(query)
+    conn.commit()
     conn.close()
     return
 
@@ -55,5 +56,6 @@ def create_results_table_with_name(db_path, table_name, dataset_name):
     query = query1 + query2
     conn = sqlite3.connect(db_path)
     conn.execute(query)
+    conn.commit()
     conn.close()
     return

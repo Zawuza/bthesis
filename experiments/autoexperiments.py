@@ -24,4 +24,5 @@ for experiment_row in c.execute(retrieve_scheduled_experiments):
     experiment = Experiment(alternatives, profiles, rule, protocol, save_result_to_db(DB_PATH, results_table))
     experiment.execute()
 
+conn.commit()
 conn.close()
