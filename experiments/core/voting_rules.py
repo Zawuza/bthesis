@@ -1,5 +1,8 @@
 borda_name = "Borda"
 
+rules_global_dict = {}
+rules_global_dict[borda_name] = borda_name
+
 
 class CompleteProfileBordaSolver:
 

@@ -28,16 +28,16 @@ profile6 = [["train", "bus", "airplane", "walk"],
             ["airplane", "train", "bus", "walk"]]
 alternatives6 = {"train", "bus", "airplane", "walk"}
 
-profile7 = [["ios", "windows", "android"], 
-            ["android", "windows", "ios"], 
+profile7 = [["ios", "windows", "android"],
+            ["android", "windows", "ios"],
             ["windows", "ios", "android"]]
 alternatives7 = {"ios", "windows", "android"}
 
 # Build dataset
 alternatives = [alternatives1, alternatives2, alternatives3,
                 alternatives4, alternatives5, alternatives6, alternatives7]
-profiles = [profile1, profile2, profile3,
-            profile4, profile5, profile6, profile7]
+profiles = [(1, profile1), (2, profile2), (3, profile3),
+            (4, profile4), (5, profile5), (6, profile6), (7, profile7)]
 
 random_pairwise = RandomPairwiseElicitationProtocol()
 test_experiment = Experiment(

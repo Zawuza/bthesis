@@ -8,7 +8,8 @@ class Experiment:
 
     def execute(self):
         for i in range(len(self.complete_profiles)):
-            complete_profile = self.complete_profiles[i]
+            complete_profile = self.complete_profiles[i][1]
+            profile_index = self.complete_profiles[i][0]
             alternatives = self.alternatives_for_profiles[i]
             result = self.elicitation_protocol.elicit_preferences(alternatives, complete_profile, self.voting_rule_name)
-            self.postprocessingfunc(result)
+            self.postprocessingfunc(result, profile_index)

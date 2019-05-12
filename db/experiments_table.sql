@@ -1,7 +1,8 @@
 CREATE TABLE `experiments` (
 	`Id`	INTEGER PRIMARY KEY AUTOINCREMENT,
-	`Rule`	TEXT,
-	`Protocol`	TEXT,
-	`Dataset`	TEXT,
-	`Results`	TEXT UNIQUE
+	`Rule`	TEXT NOT NULL,
+	`Protocol`	TEXT NOT NULL,
+	`Dataset`	TEXT NOT NULL,
+	`Results`	TEXT UNIQUE,
+	`Scheduled` BOOLEAN NOT NULL
 );
