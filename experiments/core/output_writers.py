@@ -45,7 +45,7 @@ def save_result_to_db(db_path, results_table_name):
 
 def create_results_table_with_name(db_path, table_name, dataset_name):
     query1 = "CREATE TABLE " + table_name + \
-        " ( profile_id INTEGER REFERENCES " + dataset_name + "(id),"
+        " ( profile_id INTEGER REFERENCES " + dataset_name + "(Id),"
     query2 = """
                 winner TEXT,
                 query_count INTEGER,
