@@ -14,7 +14,11 @@ retrieve_scheduled_experiments = """
 
 conn = sqlite3.connect(DB_PATH)
 c = conn.cursor()
-for experiment_row in c.execute(retrieve_scheduled_experiments):
+c.execute(retrieve_scheduled_experiments)
+scheduled_experiments = c.fetchall()
+conn.close()
+
+for experiment_row in scheduled_experiments:
     rule = rules_global_dict[experiment_row[1]]
     protocol = elicitation_protocols_global_dict[experiment_row[2]]()
     dataset_name = experiment_row[3]
@@ -23,6 +27,3 @@ for experiment_row in c.execute(retrieve_scheduled_experiments):
     create_results_table_with_name(DB_PATH, results_table, dataset_name)
     experiment = Experiment(alternatives, profiles, rule, protocol, save_result_to_db(DB_PATH, results_table))
     experiment.execute()
-
-conn.commit()
-conn.close()
