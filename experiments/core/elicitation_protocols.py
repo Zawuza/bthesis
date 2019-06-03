@@ -5,11 +5,8 @@ import random
 
 
 class ElicitationProtocol:
-    def find_winner(self):
-        return "None"
-
     def underlying_function(self):
-        return None, 0, True
+        return None, 0, True, "None"
 
     def infer_transitivity(self):
         for voter_index in range(len(self.elicitation_situation["P"])):
@@ -28,30 +25,25 @@ class ElicitationProtocol:
                                       "A": alternatives, "P": [set()] * len(complete_profile)}
 
         query_count = 0
-        winner_time = False
         query_voter_list = []
 
         while True:
-            query, voter, winner_time = self.underlying_function()
-            if winner_time:
-                winner = self.find_winner()
+            query, voter, stop, winner = self.underlying_function()
+            query_voter_list.append(
+                (str(self.elicitation_situation["P"]), str(winner), str(query), str(voter)))
+            if stop:
                 break
             voter_preferences = complete_profile[voter]
-            query_voter_list.append((str(query), str(voter)))
             response = query.elicit_from(voter_preferences)
             self.elicitation_situation["P"][voter] = self.elicitation_situation["P"][voter].union(
                 response)
             self.infer_transitivity()
             query_count = query_count + 1
 
-        return winner, query_voter_list, self.elicitation_situation["P"]
+        return query_voter_list
 
 
 class RandomPairwiseElicitationProtocol(ElicitationProtocol):
-    def find_winner(self):
-        if self.elicitation_situation["S"] == borda_name:
-            return IncompleteProfileBordaSolver.find_necessary_winner_if_exists(self.elicitation_situation["A"], self.elicitation_situation["P"])
-
     def underlying_function(self):
         maybe_winner = IncompleteProfileBordaSolver.find_necessary_winner_if_exists(
             self.elicitation_situation["A"], self.elicitation_situation["P"])
@@ -68,14 +60,12 @@ class RandomPairwiseElicitationProtocol(ElicitationProtocol):
                                 (voter_index, alternative1, alternative2))
             random_triple = random.choice(unknown_pairs_list)
             voter, a1, a2 = random_triple
-            return CompareQuery(a1, a2), voter, False
+            return CompareQuery(a1, a2), voter, False, None
         else:
-            return None, 0, True
+            return None, 0, True, maybe_winner
 
 
 class CurrentSolutionHeuristicProtocol(ElicitationProtocol):
-    def find_winner(self):
-        return self.winner
 
     def calculate_sets(self, parial_vote, a, w):
         A, B, C, D, E, F, G, U = set(), set(), set(), set(), set(), set(), set(), set()
@@ -193,10 +183,10 @@ class CurrentSolutionHeuristicProtocol(ElicitationProtocol):
         if max_regret[a_star] > 0:
             w = witnesses[a_star]
             v, a1, a2 = self.find_most_promising_query(a_star, w)
-            return CompareQuery(a1, a2), v, False
+            return CompareQuery(a1, a2), v, False, a_star
         else:
-            self.winner = a_star
-            return None, 0, True
+            return None, 0, True, a_star
+
 
 elicitation_protocols_global_dict = {}
 elicitation_protocols_global_dict["random_pairwise"] = RandomPairwiseElicitationProtocol
