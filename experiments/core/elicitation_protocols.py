@@ -1,7 +1,10 @@
+import random
+
+import numpy as np
+
 from core.voting_rules import CompleteProfileBordaSolver, borda_name, IncompleteProfileBordaSolver
 from core.queries import CompareQuery
 from core.profile_helpers import IncompleteToCompleteProfileConverter
-import random
 
 
 class ElicitationProtocol:
@@ -188,6 +191,110 @@ class CurrentSolutionHeuristicProtocol(ElicitationProtocol):
             return None, 0, True, a_star
 
 
+class MatrixFactorizationElicitationProtocol(ElicitationProtocol):
+
+    def stochastic_gradient(self, matrix, feature_count, learning_rate):
+        m, n = matrix.shape
+        voter_matrix = np.random.rand(m, feature_count)
+        alternative_matrix = np.random.rand(feature_count, n)
+        for _ in range(m*n*1000):
+            i = np.random.randint(m)
+            j = np.random.randint(n)
+            if np.isnan(matrix[i][j]):
+                continue
+            approximate = 0
+            for k in range(feature_count):
+                approximate += voter_matrix[i][k] * alternative_matrix[k][j]
+            error = matrix[i][j] - approximate
+            for k in range(feature_count):
+                voter_matrix[i][k] = voter_matrix[i][k] + 2 * \
+                    learning_rate*alternative_matrix[k][j]*error
+                alternative_matrix[k][j] = alternative_matrix[k][j] + \
+                    2*learning_rate*voter_matrix[i][k]*error
+
+        return voter_matrix, alternative_matrix
+
+    def reconstruct_profile(self, voter_matrix, alternative_matrix, alternatives):
+        complete_matrix = np.dot(voter_matrix, alternative_matrix)
+        complete_profile = []
+        for row in complete_matrix:
+            indices = np.argsort(row)
+            vote = []
+            for i in indices:
+                vote.insert(0, alternatives[i])
+            complete_profile.append(vote)
+        return complete_profile
+
+    def find_best_query(self, full_matrix, voter_matrix, alt_matrix, alt_list):
+        max_i = -1
+        max_count = -1
+        for i in range(len(full_matrix)):
+            row = full_matrix[i]
+            count = row.count(np.nan)
+            if max_count < count:
+                max_i = i
+                max_count = count
+        voter = max_i
+
+        voter_preferences = self.elicitation_situation["P"][max_i]
+        possible_pairs = []
+        for a in self.elicitation_situation["A"]:
+            for b in self.elicitation_situation["A"]:
+                if a == b:
+                    continue
+                if ((a,b) not in voter_preferences) and ((a,b) not in voter_preferences):
+                    possible_pairs.append((a,b))
+
+        scores = [] 
+        for pair in possible_pairs:
+            max_diff = -1
+            for dimension in range(len(alt_matrix)):
+                a,b = pair
+                index_a = alt_list.index(a)
+                index_b = alt_list.index(b)
+                diff = abs(alt_matrix[dimension][index_a] - alt_matrix[dimension][index_b])
+                if diff > max_diff:
+                    max_diff = diff
+            scores.append((max_diff, pair))
+        best = max(scores)
+        best_pair = best[1]
+        best_a, best_b = best_pair
+
+        return CompareQuery(best_a, best_b), max_i
+
+    def underlying_function(self):
+        alternatives_list = list(self.elicitation_situation["A"])
+        n = len(alternatives_list)
+        m = len(self.elicitation_situation["P"])
+        matrix = np.zeros((m, n))
+        for i in range(len(self.elicitation_situation["P"])):
+            voter = self.elicitation_situation["P"][i]
+            for (a, b) in voter:
+                j = alternatives_list.index(a)
+                if np.isnan(matrix[i, j]):
+                    matrix[i, j] = 1
+                else:
+                    matrix[i, j] += 1
+                if np.isnan(matrix[i, j]):
+                    matrix[i, alternatives_list.index(b)] = 0
+        voter_matrix, alternative_matrix = self.stochastic_gradient(
+            matrix, 1, 0.01)
+        complete_profile = self.reconstruct_profile(
+            voter_matrix, alternative_matrix, alternatives_list)
+        maybe_winner = IncompleteProfileBordaSolver.find_necessary_winner_if_exists(
+            self.elicitation_situation["A"], self.elicitation_situation["P"])
+        if maybe_winner == None:
+            winner = CompleteProfileBordaSolver.find_winner(
+                self.elicitation_situation["A"], complete_profile)
+            query, voter = self.find_best_query(matrix, voter_matrix, alternative_matrix, alternatives_list)
+            stop = False
+        else:
+            winner = maybe_winner
+            stop = True
+        return query, voter, stop, winner
+
+
 elicitation_protocols_global_dict = {}
 elicitation_protocols_global_dict["random_pairwise"] = RandomPairwiseElicitationProtocol
 elicitation_protocols_global_dict["current_solution_heuristic"] = CurrentSolutionHeuristicProtocol
+elicitation_protocols_global_dict["matrix_factorization"] = MatrixFactorizationElicitationProtocol
