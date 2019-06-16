@@ -304,7 +304,37 @@ class MatrixFactorizationElicitationProtocol(ElicitationProtocol):
         return query, voter, stop, winner
 
 
+# class CompletionSamplingElicitationProtocol(ElicitationProtocol):
+
+#     def generate_vote_completions(self, partial_vote):
+#         vote_completions = []
+
+#         return vote_completions
+
+#     def internal_generate_completions(self, index, votewise_completions, completions):
+        
+#         return internal_generate_completions
+
+#     def generate_completions(self):
+#         completions = []
+#         votewise_completions = []
+#         for voter in self.elicitation_situation["P"]:
+#             voter_completions = self.generate_vote_completions(voter)
+#             votewise_completions.append(voter_completions)
+#         return completions
+
+#     def underlying_function(self):
+#         completions = self.generate_completions()
+
+#         query = CompareQuery{"a","b"}
+#         voter = 0
+#         stop = True
+#         winner = "a"
+#         return query, voter, stop, winner
+
+
 elicitation_protocols_global_dict = {}
 elicitation_protocols_global_dict["random_pairwise"] = RandomPairwiseElicitationProtocol
 elicitation_protocols_global_dict["current_solution_heuristic"] = CurrentSolutionHeuristicProtocol
 elicitation_protocols_global_dict["matrix_factorization"] = MatrixFactorizationElicitationProtocol
+# elicitation_protocols_global_dict["completion_sampling"] = MatrixFactorizationElicitationProtocol
