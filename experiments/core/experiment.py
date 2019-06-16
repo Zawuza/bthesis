@@ -8,6 +8,7 @@ class Experiment:
 
     def execute(self):
         for i in range(len(self.complete_profiles)):
+            print("Process profile with index " + str(i))
             complete_profile = self.complete_profiles[i][1]
             profile_index = self.complete_profiles[i][0]
             alternatives = self.alternatives_for_profiles[i]

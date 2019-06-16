@@ -229,11 +229,17 @@ class MatrixFactorizationElicitationProtocol(ElicitationProtocol):
         max_i = -1
         max_count = -1
         for i in range(len(full_matrix)):
-            row = full_matrix[i]
-            count = row.count(np.nan)
-            if max_count < count:
-                max_i = i
+            count = 0
+            voter_preferences = voter_preferences = self.elicitation_situation["P"][i]
+            for a in self.elicitation_situation["A"]:
+                for b in self.elicitation_situation["A"]:
+                    if a == b:
+                        continue
+                    if ((a, b) not in voter_preferences) and ((b, a) not in voter_preferences):
+                        count += 1
+            if count > max_count:
                 max_count = count
+                max_i = i
         voter = max_i
 
         voter_preferences = self.elicitation_situation["P"][max_i]
@@ -242,17 +248,18 @@ class MatrixFactorizationElicitationProtocol(ElicitationProtocol):
             for b in self.elicitation_situation["A"]:
                 if a == b:
                     continue
-                if ((a,b) not in voter_preferences) and ((a,b) not in voter_preferences):
-                    possible_pairs.append((a,b))
+                if ((a, b) not in voter_preferences) and ((b, a) not in voter_preferences):
+                    possible_pairs.append((a, b))
 
-        scores = [] 
+        scores = []
         for pair in possible_pairs:
             max_diff = -1
             for dimension in range(len(alt_matrix)):
-                a,b = pair
+                a, b = pair
                 index_a = alt_list.index(a)
                 index_b = alt_list.index(b)
-                diff = abs(alt_matrix[dimension][index_a] - alt_matrix[dimension][index_b])
+                diff = abs(alt_matrix[dimension][index_a] -
+                           alt_matrix[dimension][index_b])
                 if diff > max_diff:
                     max_diff = diff
             scores.append((max_diff, pair))
@@ -260,13 +267,13 @@ class MatrixFactorizationElicitationProtocol(ElicitationProtocol):
         best_pair = best[1]
         best_a, best_b = best_pair
 
-        return CompareQuery(best_a, best_b), max_i
+        return CompareQuery(best_a, best_b), voter
 
     def underlying_function(self):
         alternatives_list = list(self.elicitation_situation["A"])
         n = len(alternatives_list)
         m = len(self.elicitation_situation["P"])
-        matrix = np.zeros((m, n))
+        matrix = np.full((m, n), np.nan)
         for i in range(len(self.elicitation_situation["P"])):
             voter = self.elicitation_situation["P"][i]
             for (a, b) in voter:
@@ -286,9 +293,12 @@ class MatrixFactorizationElicitationProtocol(ElicitationProtocol):
         if maybe_winner == None:
             winner = CompleteProfileBordaSolver.find_winner(
                 self.elicitation_situation["A"], complete_profile)
-            query, voter = self.find_best_query(matrix, voter_matrix, alternative_matrix, alternatives_list)
+            query, voter = self.find_best_query(
+                matrix, voter_matrix, alternative_matrix, alternatives_list)
             stop = False
         else:
+            query = None
+            voter = None
             winner = maybe_winner
             stop = True
         return query, voter, stop, winner
