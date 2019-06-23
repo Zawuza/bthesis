@@ -86,7 +86,7 @@ class CompletionSampler:
         return completions
 
 
-sampler = CompletionSampler(0.1, 0.01)
+sampler = CompletionSampler(0.05, 0.01)
 alts = {"a", "b", "c"}
 profile = [{("a", "b")}, {("b", "c")}, {("a", "c")}, {
     ("b", "a")}, {("c", "a")}, {("b", "c")}, set()]
@@ -98,4 +98,4 @@ for completion in completions:
     assert(completion[3].index("b") < completion[3].index("a"))
     assert(completion[4].index("c") < completion[4].index("a"))
     assert(completion[5].index("b") < completion[5].index("c"))
-    print(completion)
+    #print(completion)
