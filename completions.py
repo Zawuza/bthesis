@@ -84,5 +84,5 @@ class CompletionsGenerator:
 
 gen = CompletionsGenerator()
 alts = {"a", "b", "c"}
-profile = [{("a","b"),("b","c")}, {("a","b")}]
+profile = [set(), set(), set(), set(), set(), set(), set(), set(), set(), set()]
 print(gen.generate_completions(profile, alts))
