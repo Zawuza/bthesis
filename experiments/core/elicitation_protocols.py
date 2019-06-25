@@ -5,6 +5,7 @@ import numpy as np
 from core.voting_rules import CompleteProfileBordaSolver, borda_name, IncompleteProfileBordaSolver
 from core.queries import CompareQuery
 from core.profile_helpers import IncompleteToCompleteProfileConverter
+from core.completiongen import CompletionsGenerator
 
 
 class ElicitationProtocol:
@@ -304,37 +305,82 @@ class MatrixFactorizationElicitationProtocol(ElicitationProtocol):
         return query, voter, stop, winner
 
 
-# class CompletionSamplingElicitationProtocol(ElicitationProtocol):
+class CompletionSamplingElicitationProtocol(ElicitationProtocol):
 
-#     def generate_vote_completions(self, partial_vote):
-#         vote_completions = []
+    def __init__(self):
+        self.gen = CompletionsGenerator(0.05, 0.01)
 
-#         return vote_completions
+    def calculate_distribution(self, partial_profile, alterntaive_list):
+        completions = self.gen.generate_completions(
+            partial_profile, self.elicitation_situation["A"])
+        distribution = np.asarray([0] * len(alterntaive_list))
+        for completion in completions:
+            winner = CompleteProfileBordaSolver.find_winner(completion)
+            distribution[alternative_list.index[winner]] += 1
+        np.divide(distribution, len(completions))
+        return distribution
 
-#     def internal_generate_completions(self, index, votewise_completions, completions):
-        
-#         return internal_generate_completions
+    def find_all_possible_pairs(self):
+        possible_pairs = []
+        for i in range(len(self.elicitation_situation["P"])):
+            voter = self.elicitation_situation["P"][i]
+            for a in self.elicitation_situation["A"]:
+                for b in self.elicitation_situation["A"]:
+                    if (not (a, b) in voter) and (not (b, a) in voter):
+                        possible_pairs.append((i, (a, b)))
+        return possible_pairs
 
-#     def generate_completions(self):
-#         completions = []
-#         votewise_completions = []
-#         for voter in self.elicitation_situation["P"]:
-#             voter_completions = self.generate_vote_completions(voter)
-#             votewise_completions.append(voter_completions)
-#         return completions
+    def calculate_jsd(self, distribution1, distribution2):
+        return 0.0
 
-#     def underlying_function(self):
-#         completions = self.generate_completions()
+    def find_best_query(self, current_distribution, alternative_list):
+        query_score_pairs = []
 
-#         query = CompareQuery{"a","b"}
-#         voter = 0
-#         stop = True
-#         winner = "a"
-#         return query, voter, stop, winner
+        for voter_index, pair in self.find_all_possible_pairs:
+            partial_profile = self.elicitation_situation["P"].copy()
+            partial_profile[voter_index].add(pair)
+
+            # Tranditivity
+            for x in self.elicitation_situation["A"]:
+                for y in self.elicitation_situation["A"]:
+                    for z in self.elicitation_situation["A"]:
+                        if ((x, y) in partial_profile[voter_index]) and \
+                            ((y, z) in partial_profile[voter_index]) and \
+                                (not (x, z) in partial_profile[voter_index]):
+                            comparison = set()
+                            comparison.add((x, z))
+                            partial_profile[voter_index] = partial_profile[voter_index].union(
+                                comparison)
+
+            new_distribution = self.calculate_distribution(
+                partial_profile, alternative_list)
+            jsd_distance = self.calculate_jsd(
+                current_distribution, new_distribution)
+            query_score_pairs.append((voter_index, pair, jsd_distance))
+
+        voter_i, pair, jsd = max(
+            query_score_pairs, key=lambda i: query_score_pairs[i][2])
+        a, b = pair
+        return CompareQuery(a, b), voter_i
+
+    def underlying_function(self):
+        nec_winner = IncompleteProfileBordaSolver \
+            .find_necessary_winner_if_exists(self.elicitation_situation["A"],
+                                             self.elicitation_situation["P"])
+        if nec_winner == None:
+            alternatives = list(self.elicitation_situation["A"])
+            distribution = self.calculate_distribution(
+                self.elicitation_situation["P"], alternatives)
+            query, voter = self.find_best_query(
+                distribution, alternatives)
+            winner = "a"
+            return query, voter, False, winner
+        else:
+            return None, 0, True, nec_winner
 
 
 elicitation_protocols_global_dict = {}
 elicitation_protocols_global_dict["random_pairwise"] = RandomPairwiseElicitationProtocol
 elicitation_protocols_global_dict["current_solution_heuristic"] = CurrentSolutionHeuristicProtocol
 elicitation_protocols_global_dict["matrix_factorization"] = MatrixFactorizationElicitationProtocol
-# elicitation_protocols_global_dict["completion_sampling"] = MatrixFactorizationElicitationProtocol
+elicitation_protocols_global_dict["completion_sampling"] = CompletionSamplingElicitationProtocol
