@@ -78,7 +78,7 @@ class CompletionsGenerator:
         r = math.trunc(math.log(2/self.b)/(2*(self.e ** 2) * 2))
         completion_count = r + 2
         completions = []
-        # print("Generate " + str(completion_count) + " completions")
+        print("Generate " + str(completion_count) + " completions")
         for i in range(completion_count):
             completions.append(self.next_completion(
                 partial_profile, alternatives))

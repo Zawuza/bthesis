@@ -310,13 +310,14 @@ class CompletionSamplingElicitationProtocol(ElicitationProtocol):
     def __init__(self):
         self.gen = CompletionsGenerator(0.05, 0.01)
 
-    def calculate_distribution(self, partial_profile, alterntaive_list):
+    def calculate_distribution(self, partial_profile, alternative_list):
         completions = self.gen.generate_completions(
             partial_profile, self.elicitation_situation["A"])
-        distribution = np.asarray([0] * len(alterntaive_list))
+        distribution = np.asarray([0] * len(alternative_list))
         for completion in completions:
-            winner = CompleteProfileBordaSolver.find_winner(completion)
-            distribution[alternative_list.index[winner]] += 1
+            winner = CompleteProfileBordaSolver.find_winner(
+                self.elicitation_situation["A"], completion)
+            distribution[alternative_list.index(winner)] += 1
         np.divide(distribution, len(completions))
         return distribution
 
@@ -330,13 +331,24 @@ class CompletionSamplingElicitationProtocol(ElicitationProtocol):
                         possible_pairs.append((i, (a, b)))
         return possible_pairs
 
-    def calculate_jsd(self, distribution1, distribution2):
+    def calculate_kf_d(self, distribution1, distribution2):
+        np.add(distribution1, 0.0001)
+        np.add(distribution2, 0.0001)
+        sum = 0
+        for i in range(distribution1.size):
+            sum += distribution1[i] * np.log(distribution1[i]/distribution2[i])
         return 0.0
+
+    def calculate_jsd(self, distribution1, distribution2):
+        m_distribution = np.multiply(np.add(distribution1, distribution2), 0.5)
+        jsd = 0.5 * self.calculate_kf_d(distribution1, m_distribution) + \
+            0.5 * self.calculate_kf_d(distribution2, m_distribution)
+        return jsd
 
     def find_best_query(self, current_distribution, alternative_list):
         query_score_pairs = []
 
-        for voter_index, pair in self.find_all_possible_pairs:
+        for voter_index, pair in self.find_all_possible_pairs():
             partial_profile = self.elicitation_situation["P"].copy()
             partial_profile[voter_index].add(pair)
 
