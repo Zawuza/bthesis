@@ -1,6 +1,7 @@
 import math
 import random
 
+
 class CompletionsGenerator:
     def __init__(self, error_rate, answer_probability):
         self.e = error_rate
@@ -35,7 +36,7 @@ class CompletionsGenerator:
                         comparison = set()
                         comparison.add((x, z))
                         partial_vote = partial_vote.union(comparison)
-        
+
         return partial_vote
 
     def linearize_voter(self, partial_profile, alternatives):
@@ -53,7 +54,7 @@ class CompletionsGenerator:
     def sample_voter_uniformly(self, partial_voter, alternatives):
         complete_voter = self.linearize_voter(partial_voter, alternatives)
         m = len(alternatives)
-        T = m ** 6
+        T = m ** 4
         i = 0
         for i in range(T):
             k = random.randint(1, (2 * m) - 2)
@@ -76,9 +77,9 @@ class CompletionsGenerator:
 
     def generate_completions(self, partial_profile, alternatives):
         r = math.trunc(math.log(2/self.b)/(2*(self.e ** 2) * 2))
-        completion_count = r + 2
+        completion_count = r + 2 # +2
         completions = []
-        print("Generate " + str(completion_count) + " completions")
+        # print("Generate " + str(completion_count) + " completions")
         for i in range(completion_count):
             completions.append(self.next_completion(
                 partial_profile, alternatives))

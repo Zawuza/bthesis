@@ -308,7 +308,7 @@ class MatrixFactorizationElicitationProtocol(ElicitationProtocol):
 class CompletionSamplingElicitationProtocol(ElicitationProtocol):
 
     def __init__(self):
-        self.gen = CompletionsGenerator(0.05, 0.01)
+        self.gen = CompletionsGenerator(0.15, 0.15)
 
     def calculate_distribution(self, partial_profile, alternative_list):
         completions = self.gen.generate_completions(
@@ -327,17 +327,27 @@ class CompletionSamplingElicitationProtocol(ElicitationProtocol):
             voter = self.elicitation_situation["P"][i]
             for a in self.elicitation_situation["A"]:
                 for b in self.elicitation_situation["A"]:
+                    if a == b:
+                        continue
                     if (not (a, b) in voter) and (not (b, a) in voter):
                         possible_pairs.append((i, (a, b)))
         return possible_pairs
 
     def calculate_kf_d(self, distribution1, distribution2):
-        np.add(distribution1, 0.0001)
-        np.add(distribution2, 0.0001)
         sum = 0
+        distribution1[1] = 0
         for i in range(distribution1.size):
-            sum += distribution1[i] * np.log(distribution1[i]/distribution2[i])
-        return 0.0
+            d1_zero = np.isclose(distribution1[i],0)
+            d2_zero = np.isclose(distribution2[i],0)
+            if not d1_zero and not d2_zero:
+                sum += distribution1[i] * np.log(distribution1[i]/distribution2[i])
+            elif not d1_zero and d1_zero:
+                sum += distribution1[i] * np.log(distribution1[i]/0.0001)
+            elif d1_zero and not d2_zero:
+                sum += distribution1[i] * np.log(0.0001/distribution2[i])
+            elif d1_zero and d2_zero:
+                sum += 0
+        return sum
 
     def calculate_jsd(self, distribution1, distribution2):
         m_distribution = np.multiply(np.add(distribution1, distribution2), 0.5)
@@ -350,9 +360,10 @@ class CompletionSamplingElicitationProtocol(ElicitationProtocol):
 
         for voter_index, pair in self.find_all_possible_pairs():
             partial_profile = self.elicitation_situation["P"].copy()
-            partial_profile[voter_index].add(pair)
-
-            # Tranditivity
+            prefs = partial_profile[voter_index].copy()
+            prefs.add(pair)
+            partial_profile[voter_index] = prefs
+            # Transitivity
             for x in self.elicitation_situation["A"]:
                 for y in self.elicitation_situation["A"]:
                     for z in self.elicitation_situation["A"]:
@@ -371,7 +382,7 @@ class CompletionSamplingElicitationProtocol(ElicitationProtocol):
             query_score_pairs.append((voter_index, pair, jsd_distance))
 
         voter_i, pair, jsd = max(
-            query_score_pairs, key=lambda i: query_score_pairs[i][2])
+            query_score_pairs, key=lambda pair: pair[2])
         a, b = pair
         return CompareQuery(a, b), voter_i
 
@@ -385,10 +396,19 @@ class CompletionSamplingElicitationProtocol(ElicitationProtocol):
                 self.elicitation_situation["P"], alternatives)
             query, voter = self.find_best_query(
                 distribution, alternatives)
-            winner = "a"
+            winner = alternatives[np.argmax(distribution)]
             return query, voter, False, winner
         else:
             return None, 0, True, nec_winner
+
+class IterativeVotingElicitationProtocol(ElicitationProtocol):
+    
+    def __init__(self):
+        self.state = (0,0)
+
+    def underlying_function(self):
+        
+        return query, voter, stop, winner
 
 
 elicitation_protocols_global_dict = {}
@@ -396,3 +416,4 @@ elicitation_protocols_global_dict["random_pairwise"] = RandomPairwiseElicitation
 elicitation_protocols_global_dict["current_solution_heuristic"] = CurrentSolutionHeuristicProtocol
 elicitation_protocols_global_dict["matrix_factorization"] = MatrixFactorizationElicitationProtocol
 elicitation_protocols_global_dict["completion_sampling"] = CompletionSamplingElicitationProtocol
+elicitation_protocols_global_dict["iterative_voting"] = IterativeVotingElicitationProtocol
