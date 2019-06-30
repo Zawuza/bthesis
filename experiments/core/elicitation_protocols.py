@@ -24,6 +24,18 @@ class ElicitationProtocol:
                             self.elicitation_situation["P"][voter_index] = voter.union(
                                 comparison)
 
+    def find_all_possible_pairs(self):
+        possible_pairs = []
+        for i in range(len(self.elicitation_situation["P"])):
+            voter = self.elicitation_situation["P"][i]
+            for a in self.elicitation_situation["A"]:
+                for b in self.elicitation_situation["A"]:
+                    if a == b:
+                        continue
+                    if (not (a, b) in voter) and (not (b, a) in voter):
+                        possible_pairs.append((i, (a, b)))
+        return possible_pairs
+
     def elicit_preferences(self, alternatives, complete_profile, voting_rule_name):
         self.elicitation_situation = {"S": voting_rule_name,
                                       "A": alternatives, "P": [set()] * len(complete_profile)}
@@ -178,6 +190,35 @@ class CurrentSolutionHeuristicProtocol(ElicitationProtocol):
 
         return maxvote, maxpotentials[0], maxpotentials[1]
 
+    # def find_most_promising_query(self, a_star, w):
+    #     query_score_pairs = []
+
+    #     for voter_index, pair in self.find_all_possible_pairs():
+    #         partial_profile = self.elicitation_situation["P"].copy()
+    #         prefs = partial_profile[voter_index].copy()
+    #         prefs.add(pair)
+    #         partial_profile[voter_index] = prefs
+    #         # Transitivity
+    #         for x in self.elicitation_situation["A"]:
+    #             for y in self.elicitation_situation["A"]:
+    #                 for z in self.elicitation_situation["A"]:
+    #                     if ((x, y) in partial_profile[voter_index]) and \
+    #                         ((y, z) in partial_profile[voter_index]) and \
+    #                             (not (x, z) in partial_profile[voter_index]):
+    #                         comparison = set()
+    #                         comparison.add((x, z))
+    #                         partial_profile[voter_index] = partial_profile[voter_index].union(
+    #                             comparison)
+
+    #         pmr = self.calculate_pairwise_maximal_regret(a_star, w, partial_profile)
+    #         query_score_pairs.append(
+    #             (voter_index, pair, pmr))
+
+    #     voter_i, pair, min_pmr = min(
+    #         query_score_pairs, key=lambda pair: pair[2])
+    #     a, b = pair
+    #     return voter_i, a, b
+
     def underlying_function(self):
         max_regret = {}
         witnesses = {}
@@ -321,26 +362,15 @@ class CompletionSamplingElicitationProtocol(ElicitationProtocol):
         np.divide(distribution, len(completions))
         return distribution
 
-    def find_all_possible_pairs(self):
-        possible_pairs = []
-        for i in range(len(self.elicitation_situation["P"])):
-            voter = self.elicitation_situation["P"][i]
-            for a in self.elicitation_situation["A"]:
-                for b in self.elicitation_situation["A"]:
-                    if a == b:
-                        continue
-                    if (not (a, b) in voter) and (not (b, a) in voter):
-                        possible_pairs.append((i, (a, b)))
-        return possible_pairs
-
     def calculate_kf_d(self, distribution1, distribution2):
         sum = 0
         distribution1[1] = 0
         for i in range(distribution1.size):
-            d1_zero = np.isclose(distribution1[i],0)
-            d2_zero = np.isclose(distribution2[i],0)
+            d1_zero = np.isclose(distribution1[i], 0)
+            d2_zero = np.isclose(distribution2[i], 0)
             if not d1_zero and not d2_zero:
-                sum += distribution1[i] * np.log(distribution1[i]/distribution2[i])
+                sum += distribution1[i] * \
+                    np.log(distribution1[i]/distribution2[i])
             elif not d1_zero and d1_zero:
                 sum += distribution1[i] * np.log(distribution1[i]/0.0001)
             elif d1_zero and not d2_zero:
@@ -401,13 +431,14 @@ class CompletionSamplingElicitationProtocol(ElicitationProtocol):
         else:
             return None, 0, True, nec_winner
 
+
 class IterativeVotingElicitationProtocol(ElicitationProtocol):
-    
+
     def __init__(self):
-        self.state = (0,0)
+        self.state = (0, 0)
 
     def underlying_function(self):
-        
+
         return query, voter, stop, winner
 
 
