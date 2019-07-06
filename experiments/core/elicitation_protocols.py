@@ -81,7 +81,7 @@ class RandomPairwiseElicitationProtocol(ElicitationProtocol):
             return None, 0, True, maybe_winner
 
 
-class CurrentSolutionHeuristicProtocol(ElicitationProtocol):
+class AbstractCurrentSolutionHeuristicProtocol(ElicitationProtocol):
 
     def calculate_sets(self, parial_vote, a, w):
         A, B, C, D, E, F, G, U = set(), set(), set(), set(), set(), set(), set(), set()
@@ -137,87 +137,7 @@ class CurrentSolutionHeuristicProtocol(ElicitationProtocol):
         return maxpmr, witness
 
     def find_most_promising_query(self, a_star, w):
-        maxvote = 0
-        maxpotential = 0
-        potential_a1 = ""
-        potential_a2 = ""
-        maxpotentials = ("", "")
-        for vote in self.elicitation_situation["P"]:
-            A, B, C, D, E, F, G, U = self.calculate_sets(vote, a_star, w)
-            if (a_star, w) in vote:
-                potential = 0
-                for a in self.elicitation_situation["A"]:
-                    if a in E:
-                        potential += 1
-                        potential_a1 = a
-                        potential_a2 = w
-                    elif a in D:
-                        potential += 1
-                        potential_a1 = a
-                        potential_a2 = a_star
-                    elif a in U:
-                        potential += 1
-                        if (potential_a1 == "") and (potential_a2 == ""):
-                            potential_a1 = a
-                            potential_a2 = a_star
-            elif (w, a_star) in vote:
-                potential = 0
-                for a in self.elicitation_situation["A"]:
-                    if a in G:
-                        potential += 1
-                        potential_a1 = a
-                        potential_a2 = a_star
-                    elif a in A:
-                        potential += 1
-                        potential_a1 = w
-                        potential_a2 = a
-                    elif a in U:
-                        potential += 1
-                        if (potential_a1 == "") and (potential_a2 == ""):
-                            potential_a1 = a
-                            potential_a2 = w
-            else:
-                potential = 1  # Unknowness between a_star and w
-                for a in self.elicitation_situation["A"]:
-                    if (a in A) or (a in G) or (a in U):
-                        potential += 1
-                potential_a1 = a_star
-                potential_a2 = w
-            if potential > maxpotential:
-                maxvote = self.elicitation_situation["P"].index(vote)
-                maxpotential = potential
-                maxpotentials = (potential_a1, potential_a2)
-
-        return maxvote, maxpotentials[0], maxpotentials[1]
-
-    # def find_most_promising_query(self, a_star, w):
-    #     query_score_pairs = []
-
-    #     for voter_index, pair in self.find_all_possible_pairs():
-    #         partial_profile = self.elicitation_situation["P"].copy()
-    #         prefs = partial_profile[voter_index].copy()
-    #         prefs.add(pair)
-    #         partial_profile[voter_index] = prefs
-    #         # Transitivity
-    #         for x in self.elicitation_situation["A"]:
-    #             for y in self.elicitation_situation["A"]:
-    #                 for z in self.elicitation_situation["A"]:
-    #                     if ((x, y) in partial_profile[voter_index]) and \
-    #                         ((y, z) in partial_profile[voter_index]) and \
-    #                             (not (x, z) in partial_profile[voter_index]):
-    #                         comparison = set()
-    #                         comparison.add((x, z))
-    #                         partial_profile[voter_index] = partial_profile[voter_index].union(
-    #                             comparison)
-
-    #         pmr = self.calculate_pairwise_maximal_regret(a_star, w, partial_profile)
-    #         query_score_pairs.append(
-    #             (voter_index, pair, pmr))
-
-    #     voter_i, pair, min_pmr = min(
-    #         query_score_pairs, key=lambda pair: pair[2])
-    #     a, b = pair
-    #     return voter_i, a, b
+        return 0, CompareQuery("a", "b")
 
     def underlying_function(self):
         max_regret = {}
@@ -346,6 +266,114 @@ class MatrixFactorizationElicitationProtocol(ElicitationProtocol):
         return query, voter, stop, winner
 
 
+class CurrentSolutionHeuristicProtocol(AbstractCurrentSolutionHeuristicProtocol):
+
+    def find_most_promising_query(self, a_star, w):
+        query_score_pairs = []
+
+        for voter_index, pair in self.find_all_possible_pairs():
+            partial_profile = self.elicitation_situation["P"].copy()
+            prefs = partial_profile[voter_index].copy()
+            prefs.add(pair)
+            partial_profile[voter_index] = prefs
+            # Transitivity
+            for x in self.elicitation_situation["A"]:
+                for y in self.elicitation_situation["A"]:
+                    for z in self.elicitation_situation["A"]:
+                        if ((x, y) in partial_profile[voter_index]) and \
+                            ((y, z) in partial_profile[voter_index]) and \
+                                (not (x, z) in partial_profile[voter_index]):
+                            comparison = set()
+                            comparison.add((x, z))
+                            partial_profile[voter_index] = partial_profile[voter_index].union(
+                                comparison)
+
+            pmr1, w = self.calculate_max_regret(a_star)
+
+            partial_profile = self.elicitation_situation["P"].copy()
+            prefs = partial_profile[voter_index].copy()
+            pair = (pair[1], pair[0])
+            prefs.add(pair)
+            partial_profile[voter_index] = prefs
+            # Transitivity
+            for x in self.elicitation_situation["A"]:
+                for y in self.elicitation_situation["A"]:
+                    for z in self.elicitation_situation["A"]:
+                        if ((x, y) in partial_profile[voter_index]) and \
+                            ((y, z) in partial_profile[voter_index]) and \
+                                (not (x, z) in partial_profile[voter_index]):
+                            comparison = set()
+                            comparison.add((x, z))
+                            partial_profile[voter_index] = partial_profile[voter_index].union(
+                                comparison)
+
+            pmr2, w = self.calculate_max_regret(a_star)
+            query_score_pairs.append(
+                (voter_index, pair, max(pmr1, pmr2)))
+
+        voter_i, pair, min_pmr = min(
+            query_score_pairs, key=lambda pair: pair[2])
+        a, b = pair
+        return voter_i, a, b
+
+
+class RegertMadness(AbstractCurrentSolutionHeuristicProtocol):
+
+    def find_most_promising_query(self, a_star, w):
+        maxvote = 0
+        maxpotential = 0
+        potential_a1 = ""
+        potential_a2 = ""
+        maxpotentials = ("", "")
+        for vote in self.elicitation_situation["P"]:
+            A, B, C, D, E, F, G, U = self.calculate_sets(vote, a_star, w)
+            if (a_star, w) in vote:
+                potential = 0
+                for a in self.elicitation_situation["A"]:
+                    if a in E:
+                        potential += 1
+                        potential_a1 = a
+                        potential_a2 = w
+                    elif a in D:
+                        potential += 1
+                        potential_a1 = a
+                        potential_a2 = a_star
+                    elif a in U:
+                        potential += 1
+                        if (potential_a1 == "") and (potential_a2 == ""):
+                            potential_a1 = a
+                            potential_a2 = a_star
+            elif (w, a_star) in vote:
+                potential = 0
+                for a in self.elicitation_situation["A"]:
+                    if a in G:
+                        potential += 1
+                        potential_a1 = a
+                        potential_a2 = a_star
+                    elif a in A:
+                        potential += 1
+                        potential_a1 = w
+                        potential_a2 = a
+                    elif a in U:
+                        potential += 1
+                        if (potential_a1 == "") and (potential_a2 == ""):
+                            potential_a1 = a
+                            potential_a2 = w
+            else:
+                potential = 1  # Unknowness between a_star and w
+                for a in self.elicitation_situation["A"]:
+                    if (a in A) or (a in G) or (a in U):
+                        potential += 1
+                potential_a1 = a_star
+                potential_a2 = w
+            if potential > maxpotential:
+                maxvote = self.elicitation_situation["P"].index(vote)
+                maxpotential = potential
+                maxpotentials = (potential_a1, potential_a2)
+
+        return maxvote, maxpotentials[0], maxpotentials[1]
+
+
 class CompletionSamplingElicitationProtocol(ElicitationProtocol):
 
     def __init__(self):
@@ -435,16 +463,76 @@ class CompletionSamplingElicitationProtocol(ElicitationProtocol):
 class IterativeVotingElicitationProtocol(ElicitationProtocol):
 
     def __init__(self):
-        self.state = (0, 0)
+        self.state = (0, 1)
+
+    def state_finished(self):
+        voter, position = self.state
+        required_comparsions = len(self.elicitation_situation["A"]) - position
+        vote = self.elicitation_situation["P"][voter]
+        comparsions = {}
+        for (a, b) in vote:
+            if a in comparsions:
+                comparsions[a] += 1
+            else:
+                comparsions[a] = 1
+        found = False
+        for a in comparsions:
+            found = found or (comparsions[a] == required_comparsions)
+        return found
+
+    def find_best_query(self):
+        voter, position = self.state
+        required_comparsions = len(self.elicitation_situation["A"]) - position
+        vote = self.elicitation_situation["P"][voter]
+        comparsions = {}
+        for (a, b) in vote:
+            if a in comparsions:
+                comparsions[a] += 1
+            else:
+                comparsions[a] = 1
+        max_count = -1
+        max_a = ""
+        for a in self.elicitation_situation["A"]:
+            if a in comparsions:
+                count = comparsions[a]
+            else:
+                count = 0
+            if (count > max_count) and (count < required_comparsions):
+                max_count = count
+                max_a = a
+
+        unknown = self.elicitation_situation["A"].copy()
+        unknown.remove(max_a)
+        for (a, b) in vote:
+            if a == max_a:
+                unknown.remove(b)
+
+        return CompareQuery(max_a, random.sample(unknown, 1)[0]), voter
 
     def underlying_function(self):
+        nec_winner = IncompleteProfileBordaSolver. \
+            find_necessary_winner_if_exists(self.elicitation_situation["A"],
+                                            self.elicitation_situation["P"])
 
-        return query, voter, stop, winner
+        if nec_winner == None:
+            if self.state_finished():
+                voter, position = self.state
+                voter += 1
+                if voter > (len(self.elicitation_situation["P"])-1):
+                    voter = 0
+                    position += 1
+                self.state = (voter, position)
+            query, voter = self.find_best_query()
+            return query, voter, False, None
+        else:
+            self.state = (0,1)
+            return None, 0, True, nec_winner
 
 
 elicitation_protocols_global_dict = {}
 elicitation_protocols_global_dict["random_pairwise"] = RandomPairwiseElicitationProtocol
 elicitation_protocols_global_dict["current_solution_heuristic"] = CurrentSolutionHeuristicProtocol
+elicitation_protocols_global_dict["regret_madness"] = RegertMadness
 elicitation_protocols_global_dict["matrix_factorization"] = MatrixFactorizationElicitationProtocol
 elicitation_protocols_global_dict["completion_sampling"] = CompletionSamplingElicitationProtocol
 elicitation_protocols_global_dict["iterative_voting"] = IterativeVotingElicitationProtocol
