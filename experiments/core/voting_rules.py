@@ -1,4 +1,6 @@
 borda_name = "Borda"
+plurality_name = "Plurality"
+veto_name = "Veto"
 
 rules_global_dict = {}
 rules_global_dict[borda_name] = borda_name
