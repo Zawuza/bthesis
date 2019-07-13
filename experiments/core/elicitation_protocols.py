@@ -2,7 +2,7 @@ import random
 
 import numpy as np
 
-from core.voting_rules import CompleteProfileBordaSolver, borda_name, IncompleteProfileBordaSolver
+from core.voting_rules import BordaRule, borda_name
 from core.queries import CompareQuery
 from core.profile_helpers import IncompleteToCompleteProfileConverter
 from core.completiongen import CompletionsGenerator
@@ -61,7 +61,7 @@ class ElicitationProtocol:
 
 class RandomPairwiseElicitationProtocol(ElicitationProtocol):
     def underlying_function(self):
-        maybe_winner = IncompleteProfileBordaSolver.find_necessary_winner_if_exists(
+        maybe_winner = BordaRule.find_single_necessary_winner_if_exists(
             self.elicitation_situation["A"], self.elicitation_situation["P"])
         if maybe_winner == None:
             unknown_pairs_list = []
@@ -76,7 +76,13 @@ class RandomPairwiseElicitationProtocol(ElicitationProtocol):
                                 (voter_index, alternative1, alternative2))
             random_triple = random.choice(unknown_pairs_list)
             voter, a1, a2 = random_triple
-            return CompareQuery(a1, a2), voter, False, None
+
+            possible_winners = set()
+            for a in self.elicitation_situation["A"]:
+                if BordaRule.is_possible_winner(
+                        self.elicitation_situation["P"], self.elicitation_situation["A"], a):
+                    possible_winners.add(a)
+            return CompareQuery(a1, a2), voter, False, random.sample(possible_winners, 1)[0]
         else:
             return None, 0, True, maybe_winner
 
@@ -250,10 +256,10 @@ class MatrixFactorizationElicitationProtocol(ElicitationProtocol):
             matrix, 1, 0.01)
         complete_profile = self.reconstruct_profile(
             voter_matrix, alternative_matrix, alternatives_list)
-        maybe_winner = IncompleteProfileBordaSolver.find_necessary_winner_if_exists(
+        maybe_winner = BordaRule.find_single_necessary_winner_if_exists(
             self.elicitation_situation["A"], self.elicitation_situation["P"])
         if maybe_winner == None:
-            winner = CompleteProfileBordaSolver.find_winner(
+            winner = BordaRule.find_winner(
                 self.elicitation_situation["A"], complete_profile)
             query, voter = self.find_best_query(
                 matrix, voter_matrix, alternative_matrix, alternatives_list)
@@ -384,7 +390,7 @@ class CompletionSamplingElicitationProtocol(ElicitationProtocol):
             partial_profile, self.elicitation_situation["A"])
         distribution = np.asarray([0] * len(alternative_list))
         for completion in completions:
-            winner = CompleteProfileBordaSolver.find_winner(
+            winner = BordaRule.find_winner(
                 self.elicitation_situation["A"], completion)
             distribution[alternative_list.index(winner)] += 1
         np.divide(distribution, len(completions))
@@ -445,9 +451,9 @@ class CompletionSamplingElicitationProtocol(ElicitationProtocol):
         return CompareQuery(a, b), voter_i
 
     def underlying_function(self):
-        nec_winner = IncompleteProfileBordaSolver \
-            .find_necessary_winner_if_exists(self.elicitation_situation["A"],
-                                             self.elicitation_situation["P"])
+        nec_winner = BordaRule \
+            .find_single_necessary_winner_if_exists(self.elicitation_situation["A"],
+                                                    self.elicitation_situation["P"])
         if nec_winner == None:
             alternatives = list(self.elicitation_situation["A"])
             distribution = self.calculate_distribution(
@@ -510,9 +516,9 @@ class IterativeVotingElicitationProtocol(ElicitationProtocol):
         return CompareQuery(max_a, random.sample(unknown, 1)[0]), voter
 
     def underlying_function(self):
-        nec_winner = IncompleteProfileBordaSolver. \
-            find_necessary_winner_if_exists(self.elicitation_situation["A"],
-                                            self.elicitation_situation["P"])
+        nec_winner = BordaRule. \
+            find_single_necessary_winner_if_exists(self.elicitation_situation["A"],
+                                                   self.elicitation_situation["P"])
 
         if nec_winner == None:
             if self.state_finished():
@@ -523,9 +529,16 @@ class IterativeVotingElicitationProtocol(ElicitationProtocol):
                     position += 1
                 self.state = (voter, position)
             query, voter = self.find_best_query()
-            return query, voter, False, None
+
+            possible_winners = set()
+            for a in self.elicitation_situation["A"]:
+                if BordaRule.is_possible_winner(
+                        self.elicitation_situation["P"], self.elicitation_situation["A"], a):
+                    possible_winners.add(a)
+
+            return query, voter, False, random.sample(possible_winners, 1)[0]
         else:
-            self.state = (0,1)
+            self.state = (0, 1)
             return None, 0, True, nec_winner
 
 
