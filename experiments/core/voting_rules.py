@@ -4,11 +4,27 @@ borda_name = "Borda"
 plurality_name = "Plurality"
 veto_name = "Veto"
 
-rules_global_dict = {}
-rules_global_dict[borda_name] = borda_name
+
+class VotingRule:
+
+    @classmethod
+    def find_single_winner(cls, alternatives, complete_profile):
+        return None
+
+    @classmethod
+    def find_single_necessary_winner_if_exists(cls, alternatives, incomplete_profile):
+        return None
+
+    @classmethod
+    def is_possible_winner(cls, partial_profile, alternatives, a_star):
+        return False
+
+    @classmethod
+    def name(cls):
+        return "None"
 
 
-class BordaRule:
+class BordaRule(VotingRule):
 
     @classmethod
     def find_single_winner(cls, alternatives, complete_profile):
@@ -134,3 +150,134 @@ class BordaRule:
             return True
         else:
             return False
+
+    @classmethod
+    def name(cls):
+        return borda_name
+
+
+class PluralityRule(VotingRule):
+
+    @classmethod
+    def find_single_winner(cls, alternatives, complete_profile):
+        scores = dict.fromkeys(alternatives, 0)
+        for vote in complete_profile:
+            scores[vote[0]] += 1
+        return max(scores, key=scores.get)
+
+    @classmethod
+    def calc_known_scores(cls, alternatives, incomplete_profile):
+        scores = dict.fromkeys(alternatives, 0)
+        undefined_voters = 0
+        for p_vote in incomplete_profile:
+            comparsion_counts = dict.fromkeys(alternatives, 0)
+            for (a1, a2) in p_vote:
+                comparsion_counts[a1] += 1
+            leader_found = False
+            for a in comparsion_counts:
+                if comparsion_counts[a] == (len(alternatives)-1):
+                    scores[a] += 1
+                    leader_found = True
+                    break
+            if not leader_found:
+                undefined_voters += 1
+
+        return scores, undefined_voters
+
+    @classmethod
+    def find_single_necessary_winner_if_exists(cls, alternatives, incomplete_profile):
+        scores, unknown_voters = cls.calc_known_scores(
+            alternatives, incomplete_profile)
+
+        for a in alternatives:
+            is_nw = True
+            for b in alternatives:
+                if scores[a] < (scores[b] + unknown_voters):
+                    is_nw = False
+            if is_nw:
+                return a
+
+        return None
+
+    @classmethod
+    def is_possible_winner(cls, partial_profile, alternatives, a_star):
+        scores, unknown_voters = cls.calc_known_scores(
+            alternatives, partial_profile)
+
+        is_pw = True
+        for a in alternatives:
+            if (scores[a_star] + unknown_voters) < scores[a]:
+                is_pw = False
+
+        return is_pw
+
+    @classmethod
+    def name(cls):
+        return plurality_name
+
+
+class VetoRule(VotingRule):
+    @classmethod
+    def find_single_winner(cls, alternatives, complete_profile):
+        scores = dict.fromkeys(alternatives, 0)
+        for voter in complete_profile:
+            for i in range(len(voter)-1):
+                scores[voter[i]] += 1
+        return max(scores, key=scores.get)
+
+    @classmethod
+    def calc_last(cls, alternatives, incomplete_profile):
+        count_where_the_last_is = dict.fromkeys(alternatives, 0)
+        undefined_voters = 0
+        for p_vote in incomplete_profile:
+            beat_counts = dict.fromkeys(alternatives, 0)
+            for (a1, a2) in p_vote:
+                beat_counts[a2] += 1
+            down_found = False
+            for a in alternatives:
+                if beat_counts[a] == (len(alternatives) - 1):
+                    down_found = True
+                    count_where_the_last_is[a] += 1
+                    break
+            if not down_found:
+                undefined_voters += 1
+
+        return count_where_the_last_is, undefined_voters
+
+    @classmethod
+    def find_single_necessary_winner_if_exists(cls, alternatives, incomplete_profile):
+        count_where_the_last_is, undefined_voters = cls.calc_last(
+            alternatives, incomplete_profile)
+        max_score = len(incomplete_profile)
+        for a in alternatives:
+            is_nw = True
+            for b in alternatives:
+                if (max_score - count_where_the_last_is[a] - undefined_voters) \
+                        < (max_score - count_where_the_last_is[b]):
+                    is_nw = False
+            if is_nw:
+                return a
+        return None
+
+    @classmethod
+    def is_possible_winner(cls, partial_profile, alternatives, a_star):
+        count_where_the_last_is, undefined_voters = cls.calc_last(
+            alternatives, partial_profile)
+        max_score = len(partial_profile)
+        is_pw = True
+        for a in alternatives:
+            if (max_score - count_where_the_last_is[a_star]) \
+                    < (max_score - count_where_the_last_is[a] - undefined_voters):
+                is_pw = False
+
+        return is_pw
+
+    @classmethod
+    def name(cls):
+        return veto_name
+
+
+rules_global_dict = {}
+rules_global_dict[borda_name] = BordaRule
+rules_global_dict[plurality_name] = PluralityRule
+rules_global_dict[veto_name] = VetoRule
