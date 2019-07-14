@@ -2,7 +2,7 @@ import random
 
 import numpy as np
 
-from core.voting_rules import BordaRule, borda_name
+from core.voting_rules import BordaRule, rules_global_dict, borda_name, plurality_name, veto_name
 from core.queries import CompareQuery
 from core.profile_helpers import IncompleteToCompleteProfileConverter
 from core.completiongen import CompletionsGenerator
@@ -37,7 +37,9 @@ class ElicitationProtocol:
         return possible_pairs
 
     def elicit_preferences(self, alternatives, complete_profile, voting_rule_name):
-        self.elicitation_situation = {"S": voting_rule_name,
+        voting_rule = rules_global_dict[voting_rule_name]
+
+        self.elicitation_situation = {"S": voting_rule,
                                       "A": alternatives, "P": [set()] * len(complete_profile)}
 
         query_count = 0
@@ -61,7 +63,7 @@ class ElicitationProtocol:
 
 class RandomPairwiseElicitationProtocol(ElicitationProtocol):
     def underlying_function(self):
-        maybe_winner = BordaRule.find_single_necessary_winner_if_exists(
+        maybe_winner = self.elicitation_situation["S"].find_single_necessary_winner_if_exists(
             self.elicitation_situation["A"], self.elicitation_situation["P"])
         if maybe_winner == None:
             unknown_pairs_list = []
@@ -79,7 +81,7 @@ class RandomPairwiseElicitationProtocol(ElicitationProtocol):
 
             possible_winners = set()
             for a in self.elicitation_situation["A"]:
-                if BordaRule.is_possible_winner(
+                if self.elicitation_situation["S"].is_possible_winner(
                         self.elicitation_situation["P"], self.elicitation_situation["A"], a):
                     possible_winners.add(a)
             return CompareQuery(a1, a2), voter, False, random.sample(possible_winners, 1)[0]
@@ -116,7 +118,7 @@ class AbstractCurrentSolutionHeuristicProtocol(ElicitationProtocol):
                 U.add(alternative)
         return A, B, C, D, E, F, G, U
 
-    def calculate_pairwise_maximal_regret(self, a, w, incomplete_profile):
+    def calculate_borda_pmr(self, a, w, incomplete_profile):
         pmr = 0
         for vote in incomplete_profile:
             A, B, C, D, E, F, G, U = self.calculate_sets(vote, a, w)
@@ -127,6 +129,66 @@ class AbstractCurrentSolutionHeuristicProtocol(ElicitationProtocol):
                     1 - len(C) - len(D) - len(E) - len(F)
             else:
                 pmr += len(A) + len(G) + len(U) + 1
+        return pmr
+
+    def calculate_plurality_pmr(self, a, w, incomplete_profile):
+        pmr = 0
+        for vote in incomplete_profile:
+            top = ""
+            comparsions_count = dict.fromkeys(
+                self.elicitation_situation["A"], 0)
+            for (a1, a2) in incomplete_profile:
+                comparsions_count[a1] += 1
+            for a1 in self.elicitation_situation["A"]:
+                if comparsions_count[a1] == (len(self.elicitation_situation) - 1):
+                    top = a1
+
+            if top == a:
+                pmr -= 1
+            elif top == w:
+                pmr += 1
+            elif top == "":
+                w_is_possible_top = True
+                for a1 in self.elicitation_situation["A"]:
+                    if (a1, w) in vote:
+                        w_is_possible_top = False
+                if w_is_possible_top:
+                    pmr += 1
+
+        return pmr
+
+    def calculate_veto_pmr(self, a, w, incomplete_profile):
+        pmr = 0
+        for vote in incomplete_profile:
+            bottom = ""
+            beats_counts = dict.fromkeys(
+                self.elicitation_situation["A"], 0)
+            for (a1, a2) in incomplete_profile:
+                comparsions_count[a2] += 1
+            for a1 in self.elicitation_situation["A"]:
+                if beats_counts[a1] == (len(self.elicitation_situation) - 1):
+                    bottom = a1
+
+            if bottom == w:
+                pmr = - 1
+            elif bottom == a:
+                pmr += 1
+            elif bottom == "":
+                a_is_possible_bottom = True
+                for a1 in self.elicitation_situation["A"]:
+                    if (a, a1) in vote:
+                        a_is_possible_bottom = False
+                pmr += 1
+
+        return pmr
+
+    def calculate_pairwise_maximal_regret(self, a, w, incomplete_profile):
+        if self.elicitation_situation["S"].name() == borda_name:
+            pmr = self.calculate_borda_pmr(a, w, incomplete_profile)
+        elif self.elicitation_situation["S"].name() == plurality_name:
+            pmr = calculate_plurality_pmr(a, w, incomplete_profile)
+        elif self.elicitation_situation["S"].name() == veto_name:
+            pmr = calculate_veto_pmr(a, w, incomplete_profile)
         return pmr
 
     def calculate_max_regret(self, alternative):
@@ -256,10 +318,10 @@ class MatrixFactorizationElicitationProtocol(ElicitationProtocol):
             matrix, 1, 0.01)
         complete_profile = self.reconstruct_profile(
             voter_matrix, alternative_matrix, alternatives_list)
-        maybe_winner = BordaRule.find_single_necessary_winner_if_exists(
+        maybe_winner = self.elicitation_situation["S"].find_single_necessary_winner_if_exists(
             self.elicitation_situation["A"], self.elicitation_situation["P"])
         if maybe_winner == None:
-            winner = BordaRule.find_winner(
+            winner = self.elicitation_situation["S"].find_winner(
                 self.elicitation_situation["A"], complete_profile)
             query, voter = self.find_best_query(
                 matrix, voter_matrix, alternative_matrix, alternatives_list)
@@ -325,7 +387,7 @@ class CurrentSolutionHeuristicProtocol(AbstractCurrentSolutionHeuristicProtocol)
 
 class RegertMadness(AbstractCurrentSolutionHeuristicProtocol):
 
-    def find_most_promising_query(self, a_star, w):
+    def find_most_promising_query_for_borda(self, a_star, w):
         maxvote = 0
         maxpotential = 0
         potential_a1 = ""
@@ -379,6 +441,144 @@ class RegertMadness(AbstractCurrentSolutionHeuristicProtocol):
 
         return maxvote, maxpotentials[0], maxpotentials[1]
 
+    def find_most_promising_query_for_plurality(self, a_star, w):
+        maxvote = 0
+        maxpotential = 0
+        maxpotential1 = ""
+        maxpotential2 = ""
+        for i in range(len(self.elicitation_situation["P"])):
+            vote = self.elicitation_situation["P"][i]
+            potential = 0
+            potential1 = ""
+            potential2 = ""
+            # Find whether a and w are necessary/possible tops
+            w_possible_top = True
+            w_necessary_top = False
+            w_comps = 0
+            a_star_possible_top = True
+            a_star_necessary_top = False
+            a_star_comps = 0
+            for (a, b) in vote:
+                if b == a_star:
+                    a_star_possible_top = False
+                if b == w:
+                    w_possible_top = False
+                if a == a_star:
+                    a_comps += 1
+                if a == w:
+                    w_comps += 1
+            if a_star_comps == (len(self.elicitation_situation["A"])-1):
+                a_star_necessary_top = True
+            if w_comps == (len(self.elicitation_situation["A"])-1):
+                w_necessary_top = True
+
+            # If we can show that w is not necessary top, we can reduce regret
+            if w_possible_top and not w_necessary_top:
+                potential += 1
+            # If we can show that a_star is necessary top, we can reduce regret
+            if a_star_possible_top and not a_star_necessary_top:
+                potential += 1
+
+            # Find a query
+            if (not (a_star, w) in vote) and (not (w, a_star) in vote):
+                potential1 = a_star
+                potential2 = w
+            else:
+                if a_star_possible_top:
+                    for a in self.elicitation_situation["A"]:
+                        if not ((a_star, a) in vote):
+                            potential1 = a_star
+                            potential2 = a
+                            break
+                else:
+                    for a in self.elicitation_situation["A"]:
+                        if (not ((a, w) in vote)) and (not ((w, a) in vote)):
+                            potential1 = w
+                            potential2 = a
+                            break
+
+            if potential > maxpotential:
+                maxpotential = potential
+                maxvote = i
+                maxpotential1 = potential1
+                maxpotential2 = potential2
+
+        return maxvote, maxpotential1, maxpotential2
+
+    def find_most_promising_query_for_veto(self, a_star, w):
+        maxvote = 0
+        maxpotential = 0
+        maxpotential1 = ""
+        maxpotential2 = ""
+
+        for i in range(len(self.elicitation_situation["P"])):
+            vote = self.elicitation_situation["P"][i]
+            potential = 0
+            potential1 = ""
+            potential2 = ""
+
+            # Find whether a and w are necessary/possible bottoms
+            w_possible_bottom = True
+            w_necessary_bottom = False
+            w_beaten = 0
+            a_star_possible_bottom = True
+            a_star_necessary_bottom = False
+            a_star_beaten = 0
+            for (a, b) in vote:
+                if a == a_star:
+                    a_star_possible_bottom = False
+                if a == w:
+                    w_possible_bottom = False
+                if b == a_star:
+                    a_star_beaten += 1
+                if b == w:
+                    w_beaten += 1
+            if a_star_beaten == (len(self.elicitation_situation["A"])-1):
+                a_star_necessary_bottom = True
+            if w_beaten == (len(self.elicitation_situation["A"])-1):
+                w_necessary_bottom = True
+
+            # If we can show later that a_star isn't necessary bottom, we can reduce regret
+            if a_star_possible_bottom and not a_star_necessary_bottom:
+                potential += 1
+            # If we can show later that w is necessary bottom, we can reduce regret
+            if w_possible_bottom and not w_necessary_bottom:
+                potential += 1
+
+            # Decide which query
+            if (not (a_star, w) in vote) and (not (w, a_star) in vote):
+                potential1 = a_star
+                potential2 = w
+            else:
+                if w_possible_bottom:
+                    for a in self.elicitation_situation["A"]:
+                        if not ((a, w) in vote):
+                            potential1 = w
+                            potential2 = a
+                            break
+                else:
+                    for a in self.elicitation_situation["A"]:
+                        if (not ((a, a_star) in vote)) and (not ((a_star, a) in vote)):
+                            potential1 = a_star
+                            potential2 = a
+                            break
+
+            if potential > maxpotential:
+                maxpotential = potential
+                maxvote = i
+                maxpotential1 = potential1
+                maxpotential2 = potential2
+
+        return maxvote, maxpotential1, maxpotential2
+
+    def find_most_promising_query(self, a_star, w):
+        if self.elicitation_situation["S"].name() == borda_name:
+            return self.find_most_promising_query_for_borda(a_star, w)
+        elif self.elicitation_situation["S"].name() == plurality_name:
+            return self.find_most_promising_query_for_plurality(a_star, w)
+        elif self.elicitation_situation["S"].name() == veto_name:
+            return self.find_most_promising_query_for_veto(a_star, w)
+
 
 class CompletionSamplingElicitationProtocol(ElicitationProtocol):
 
@@ -390,7 +590,7 @@ class CompletionSamplingElicitationProtocol(ElicitationProtocol):
             partial_profile, self.elicitation_situation["A"])
         distribution = np.asarray([0] * len(alternative_list))
         for completion in completions:
-            winner = BordaRule.find_winner(
+            winner = self.elicitation_situation["S"].find_winner(
                 self.elicitation_situation["A"], completion)
             distribution[alternative_list.index(winner)] += 1
         np.divide(distribution, len(completions))
@@ -451,7 +651,7 @@ class CompletionSamplingElicitationProtocol(ElicitationProtocol):
         return CompareQuery(a, b), voter_i
 
     def underlying_function(self):
-        nec_winner = BordaRule \
+        nec_winner = self.elicitation_situation["S"] \
             .find_single_necessary_winner_if_exists(self.elicitation_situation["A"],
                                                     self.elicitation_situation["P"])
         if nec_winner == None:
@@ -516,7 +716,7 @@ class IterativeVotingElicitationProtocol(ElicitationProtocol):
         return CompareQuery(max_a, random.sample(unknown, 1)[0]), voter
 
     def underlying_function(self):
-        nec_winner = BordaRule. \
+        nec_winner = self.elicitation_situation["S"]. \
             find_single_necessary_winner_if_exists(self.elicitation_situation["A"],
                                                    self.elicitation_situation["P"])
 
@@ -532,7 +732,7 @@ class IterativeVotingElicitationProtocol(ElicitationProtocol):
 
             possible_winners = set()
             for a in self.elicitation_situation["A"]:
-                if BordaRule.is_possible_winner(
+                if self.elicitation_situation["S"].is_possible_winner(
                         self.elicitation_situation["P"], self.elicitation_situation["A"], a):
                     possible_winners.add(a)
 
