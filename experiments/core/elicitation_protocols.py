@@ -36,9 +36,7 @@ class ElicitationProtocol:
                         possible_pairs.append((i, (a, b)))
         return possible_pairs
 
-    def elicit_preferences(self, alternatives, complete_profile, voting_rule_name):
-        voting_rule = rules_global_dict[voting_rule_name]
-
+    def elicit_preferences(self, alternatives, complete_profile, voting_rule):
         self.elicitation_situation = {"S": voting_rule,
                                       "A": alternatives, "P": [set()] * len(complete_profile)}
 
@@ -137,7 +135,7 @@ class AbstractCurrentSolutionHeuristicProtocol(ElicitationProtocol):
             top = ""
             comparsions_count = dict.fromkeys(
                 self.elicitation_situation["A"], 0)
-            for (a1, a2) in incomplete_profile:
+            for (a1, a2) in vote:
                 comparsions_count[a1] += 1
             for a1 in self.elicitation_situation["A"]:
                 if comparsions_count[a1] == (len(self.elicitation_situation) - 1):
@@ -163,8 +161,8 @@ class AbstractCurrentSolutionHeuristicProtocol(ElicitationProtocol):
             bottom = ""
             beats_counts = dict.fromkeys(
                 self.elicitation_situation["A"], 0)
-            for (a1, a2) in incomplete_profile:
-                comparsions_count[a2] += 1
+            for (a1, a2) in vote:
+                beats_counts[a2] += 1
             for a1 in self.elicitation_situation["A"]:
                 if beats_counts[a1] == (len(self.elicitation_situation) - 1):
                     bottom = a1
@@ -186,9 +184,9 @@ class AbstractCurrentSolutionHeuristicProtocol(ElicitationProtocol):
         if self.elicitation_situation["S"].name() == borda_name:
             pmr = self.calculate_borda_pmr(a, w, incomplete_profile)
         elif self.elicitation_situation["S"].name() == plurality_name:
-            pmr = calculate_plurality_pmr(a, w, incomplete_profile)
+            pmr = self.calculate_plurality_pmr(a, w, incomplete_profile)
         elif self.elicitation_situation["S"].name() == veto_name:
-            pmr = calculate_veto_pmr(a, w, incomplete_profile)
+            pmr = self.calculate_veto_pmr(a, w, incomplete_profile)
         return pmr
 
     def calculate_max_regret(self, alternative):
@@ -321,7 +319,7 @@ class MatrixFactorizationElicitationProtocol(ElicitationProtocol):
         maybe_winner = self.elicitation_situation["S"].find_single_necessary_winner_if_exists(
             self.elicitation_situation["A"], self.elicitation_situation["P"])
         if maybe_winner == None:
-            winner = self.elicitation_situation["S"].find_winner(
+            winner = self.elicitation_situation["S"].find_single_winner(
                 self.elicitation_situation["A"], complete_profile)
             query, voter = self.find_best_query(
                 matrix, voter_matrix, alternative_matrix, alternatives_list)
@@ -464,7 +462,7 @@ class RegertMadness(AbstractCurrentSolutionHeuristicProtocol):
                 if b == w:
                     w_possible_top = False
                 if a == a_star:
-                    a_comps += 1
+                    a_star_comps += 1
                 if a == w:
                     w_comps += 1
             if a_star_comps == (len(self.elicitation_situation["A"])-1):
@@ -486,12 +484,16 @@ class RegertMadness(AbstractCurrentSolutionHeuristicProtocol):
             else:
                 if a_star_possible_top:
                     for a in self.elicitation_situation["A"]:
+                        if a == a_star:
+                            continue
                         if not ((a_star, a) in vote):
                             potential1 = a_star
                             potential2 = a
                             break
                 else:
                     for a in self.elicitation_situation["A"]:
+                        if w == a:
+                            continue
                         if (not ((a, w) in vote)) and (not ((w, a) in vote)):
                             potential1 = w
                             potential2 = a
@@ -552,12 +554,16 @@ class RegertMadness(AbstractCurrentSolutionHeuristicProtocol):
             else:
                 if w_possible_bottom:
                     for a in self.elicitation_situation["A"]:
+                        if a == w:
+                            continue
                         if not ((a, w) in vote):
                             potential1 = w
                             potential2 = a
                             break
                 else:
                     for a in self.elicitation_situation["A"]:
+                        if a == a_star:
+                            continue
                         if (not ((a, a_star) in vote)) and (not ((a_star, a) in vote)):
                             potential1 = a_star
                             potential2 = a
@@ -590,7 +596,7 @@ class CompletionSamplingElicitationProtocol(ElicitationProtocol):
             partial_profile, self.elicitation_situation["A"])
         distribution = np.asarray([0] * len(alternative_list))
         for completion in completions:
-            winner = self.elicitation_situation["S"].find_winner(
+            winner = self.elicitation_situation["S"].find_single_winner(
                 self.elicitation_situation["A"], completion)
             distribution[alternative_list.index(winner)] += 1
         np.divide(distribution, len(completions))
@@ -710,8 +716,10 @@ class IterativeVotingElicitationProtocol(ElicitationProtocol):
         unknown = self.elicitation_situation["A"].copy()
         unknown.remove(max_a)
         for (a, b) in vote:
-            if a == max_a:
+            if (a == max_a):
                 unknown.remove(b)
+            if (b == max_a):
+                unknown.remove(a)
 
         return CompareQuery(max_a, random.sample(unknown, 1)[0]), voter
 
@@ -721,7 +729,7 @@ class IterativeVotingElicitationProtocol(ElicitationProtocol):
                                                    self.elicitation_situation["P"])
 
         if nec_winner == None:
-            if self.state_finished():
+            while self.state_finished():
                 voter, position = self.state
                 voter += 1
                 if voter > (len(self.elicitation_situation["P"])-1):
