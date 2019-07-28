@@ -23,6 +23,10 @@ class VotingRule:
     def name(cls):
         return "None"
 
+    @classmethod
+    def get_score(cls, alternatives, complete_profile, alternative):
+        return 0
+
 
 class BordaRule(VotingRule):
 
@@ -154,6 +158,15 @@ class BordaRule(VotingRule):
     @classmethod
     def name(cls):
         return borda_name
+
+    @classmethod
+    def get_score(cls, alternatives, complete_profile, alternative):
+        score = 0
+        for voter in complete_profile:
+            for i in range(len(voter)):
+                if voter[i] == alternative:
+                    score += len(voter) - i - 1
+        return score
 
 
 class PluralityRule(VotingRule):
