@@ -228,6 +228,14 @@ class PluralityRule(VotingRule):
     def name(cls):
         return plurality_name
 
+    @classmethod
+    def get_score(cls, alternatives, complete_profile, alternative):
+        score = 0
+        for voter in complete_profile:
+            if voter[0] == alternative:
+                score += 1
+        return score
+
 
 class VetoRule(VotingRule):
     @classmethod
@@ -288,6 +296,14 @@ class VetoRule(VotingRule):
     @classmethod
     def name(cls):
         return veto_name
+
+    @classmethod
+    def get_score(cls, alternatives, complete_profile, alternative):
+        score = 0
+        for voter in complete_profile:
+            if voter[len(voter)-1] != alternative:
+                score += 1
+        return score
 
 
 rules_global_dict = {}
