@@ -5,7 +5,7 @@ from core.voting_rules import rules_global_dict
 
 DB_PATH = ".\\db\\data.db"
 DATASET = "l_dataset_uniform_3x3"
-RULE_NAME = "Plurality"
+RULE_NAME = "Veto"
 
 
 def find_optimal_count(alternatives, complete_p):
