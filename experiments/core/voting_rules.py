@@ -205,6 +205,8 @@ class PluralityRule(VotingRule):
         for a in alternatives:
             is_nw = True
             for b in alternatives:
+                if a == b:
+                    continue
                 if scores[a] < (scores[b] + unknown_voters):
                     is_nw = False
             if is_nw:
@@ -273,6 +275,8 @@ class VetoRule(VotingRule):
         for a in alternatives:
             is_nw = True
             for b in alternatives:
+                if a == b:
+                    continue
                 if (max_score - count_where_the_last_is[a] - undefined_voters) \
                         < (max_score - count_where_the_last_is[b]):
                     is_nw = False

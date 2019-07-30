@@ -31,7 +31,7 @@ def find_optimal_count(alternatives, complete_p):
             a,b = query
             index_a = complete_p[voter].index(a)
             index_b = complete_p[voter].index(b)
-            if index_a > index_b:
+            if index_a < index_b:
                 inc_vote = inc_vote.union({(a,b)})
             else:
                 inc_vote = inc_vote.union({(b,a)})
