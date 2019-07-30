@@ -313,7 +313,7 @@ class MatrixFactorizationElicitationProtocol(ElicitationProtocol):
                 if np.isnan(matrix[i, j]):
                     matrix[i, alternatives_list.index(b)] = 0
         voter_matrix, alternative_matrix = self.stochastic_gradient(
-            matrix, 1, 1)
+            matrix, 1, 0.1)
         complete_profile = self.reconstruct_profile(
             voter_matrix, alternative_matrix, alternatives_list)
         maybe_winner = self.elicitation_situation["S"].find_single_necessary_winner_if_exists(
@@ -589,7 +589,7 @@ class RegertMadness(AbstractCurrentSolutionHeuristicProtocol):
 class CompletionSamplingElicitationProtocol(ElicitationProtocol):
 
     def __init__(self):
-        self.gen = CompletionsGenerator(0.13, 0.13)
+        self.gen = CompletionsGenerator(0.14, 0.14)
 
     def calculate_distribution(self, partial_profile, alternative_list):
         completions = self.gen.generate_completions(
