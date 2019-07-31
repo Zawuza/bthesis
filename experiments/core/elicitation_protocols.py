@@ -589,7 +589,7 @@ class RegertMadness(AbstractCurrentSolutionHeuristicProtocol):
 class CompletionSamplingElicitationProtocol(ElicitationProtocol):
 
     def __init__(self):
-        self.gen = CompletionsGenerator(0.14, 0.14)
+        self.gen = CompletionsGenerator(0.13, 0.13)
 
     def calculate_distribution(self, partial_profile, alternative_list):
         completions = self.gen.generate_completions(
