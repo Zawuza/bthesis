@@ -6,13 +6,13 @@ DB_PATH = ".\\db\\data.db"
 DATASET_SIZE = 200
 DATASET = "l_dataset_uniform_3x3"
 TABLES = [
-    "l_results_cs_borda_uniform3x3_1",
-    "l_results_cs_borda_uniform3x3_2",
-    "l_results_cs_borda_uniform3x3_3",
-    "l_results_cs_borda_uniform3x3_4"
+    "l_results_cs_veto_uniform3x3_1",
+    "l_results_cs_veto_uniform3x3_2",
+    "l_results_cs_veto_uniform3x3_3",
+    "l_results_cs_veto_uniform3x3_4"
 ]
 MAX_QUERY_COUNT = 20
-RULE_NAME = "Borda"
+RULE_NAME = "Veto"
 
 for i in range(MAX_QUERY_COUNT+1):
     sql_query = ""
