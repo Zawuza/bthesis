@@ -82,6 +82,8 @@ class RandomPairwiseElicitationProtocol(ElicitationProtocol):
                 if self.elicitation_situation["S"].is_possible_winner(
                         self.elicitation_situation["P"], self.elicitation_situation["A"], a):
                     possible_winners.add(a)
+            if len(possible_winners) == 0:
+                possible_winners = self.elicitation_situation["A"]
             return CompareQuery(a1, a2), voter, False, random.sample(possible_winners, 1)[0]
         else:
             return None, 0, True, maybe_winner
@@ -743,6 +745,8 @@ class IterativeVotingElicitationProtocol(ElicitationProtocol):
                 if self.elicitation_situation["S"].is_possible_winner(
                         self.elicitation_situation["P"], self.elicitation_situation["A"], a):
                     possible_winners.add(a)
+            if len(possible_winners) == 0:
+                possible_winners = self.elicitation_situation["A"]
 
             return query, voter, False, random.sample(possible_winners, 1)[0]
         else:
