@@ -390,10 +390,10 @@ class RegertMadness(AbstractCurrentSolutionHeuristicProtocol):
     def find_most_promising_query_for_borda(self, a_star, w):
         maxvote = 0
         maxpotential = 0
-        potential_a1 = ""
-        potential_a2 = ""
         maxpotentials = ("", "")
         for vote in self.elicitation_situation["P"]:
+            potential_a1 = ""
+            potential_a2 = ""
             A, B, C, D, E, F, G, U = self.calculate_sets(vote, a_star, w)
             if (a_star, w) in vote:
                 potential = 0
@@ -478,13 +478,16 @@ class RegertMadness(AbstractCurrentSolutionHeuristicProtocol):
             # If we can show that a_star is necessary top, we can reduce regret
             if a_star_possible_top and not a_star_necessary_top:
                 potential += 1
+            # If a vote is not complete, there is still some potential
+            if len(vote) < ((len(self.elicitation_situation["A"]) ** 2 - len(self.elicitation_situation["A"]))/2):
+                potential += 1
 
             # Find a query
             if (not (a_star, w) in vote) and (not (w, a_star) in vote):
                 potential1 = a_star
                 potential2 = w
             else:
-                if a_star_possible_top:
+                if a_star_possible_top and not a_star_necessary_top:
                     for a in self.elicitation_situation["A"]:
                         if a == a_star:
                             continue
@@ -500,7 +503,17 @@ class RegertMadness(AbstractCurrentSolutionHeuristicProtocol):
                             potential1 = w
                             potential2 = a
                             break
+                    if (potential1 == "") and (potential2 == ""):
+                        for a in self.elicitation_situation["A"]:
+                            for b in self.elicitation_situation["A"]:
+                                if a == b:
+                                    continue
+                                if (not ((a, b) in vote)) and (not ((b, a) in vote)):
+                                    potential1 = a
+                                    potential2 = b
 
+            if (potential1 == "") and (potential2 == ""):
+                continue
             if potential > maxpotential:
                 maxpotential = potential
                 maxvote = i
@@ -548,13 +561,16 @@ class RegertMadness(AbstractCurrentSolutionHeuristicProtocol):
             # If we can show later that w is necessary bottom, we can reduce regret
             if w_possible_bottom and not w_necessary_bottom:
                 potential += 1
+            # If a vote is not complete, there is still some potential
+            if len(vote) < ((len(self.elicitation_situation["A"]) ** 2 - len(self.elicitation_situation["A"]))/2):
+                potential += 1
 
             # Decide which query
             if (not (a_star, w) in vote) and (not (w, a_star) in vote):
                 potential1 = a_star
                 potential2 = w
             else:
-                if w_possible_bottom:
+                if w_possible_bottom and not w_necessary_bottom:
                     for a in self.elicitation_situation["A"]:
                         if a == w:
                             continue
@@ -570,13 +586,28 @@ class RegertMadness(AbstractCurrentSolutionHeuristicProtocol):
                             potential1 = a_star
                             potential2 = a
                             break
+                    if (potential1 == "") and (potential2 == ""):
+                        for a in self.elicitation_situation["A"]:
+                            for b in self.elicitation_situation["A"]:
+                                if a == b:
+                                    continue
+                                # if potential > 0:
+                                #     print("consider ", a, b)
+                                if (not ((a, b) in vote)) and (not ((b, a) in vote)):
+                                    potential1 = a
+                                    potential2 = b
 
+            # print(potential, potential1, potential2)
+            if (potential1 == "") and (potential2 == ""):
+                continue
             if potential > maxpotential:
                 maxpotential = potential
                 maxvote = i
                 maxpotential1 = potential1
                 maxpotential2 = potential2
 
+        # if maxpotential1 == maxpotential2:
+            # return maxvote, maxpotential1, maxpotential2
         return maxvote, maxpotential1, maxpotential2
 
     def find_most_promising_query(self, a_star, w):
