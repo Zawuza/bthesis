@@ -729,21 +729,31 @@ class IterativeVotingElicitationProtocol(ElicitationProtocol):
         voter, position = self.state
         required_comparsions = len(self.elicitation_situation["A"]) - position
         vote = self.elicitation_situation["P"][voter]
-        comparsions = {}
+        downs_counts = {}
+        ups_counts = {}
         for (a, b) in vote:
-            if a in comparsions:
-                comparsions[a] += 1
+            if a in downs_counts:
+                downs_counts[a] += 1
             else:
-                comparsions[a] = 1
+                downs_counts[a] = 1
+            if b in ups_counts:
+                ups_counts[b] += 1
+            else:
+                ups_counts[b] = 1
         max_count = -1
         max_a = ""
         for a in self.elicitation_situation["A"]:
-            if a in comparsions:
-                count = comparsions[a]
+            if a in downs_counts:
+                downs_count = downs_counts[a]
             else:
-                count = 0
-            if (count > max_count) and (count < required_comparsions):
-                max_count = count
+                downs_count = 0
+            if a in ups_counts:
+                ups_count = ups_counts[a]
+            else:
+                ups_count = 0
+            m = len(self.elicitation_situation["A"])
+            if (downs_count > max_count) and (downs_count < required_comparsions) and (ups_count < (m - required_comparsions) ):
+                max_count = downs_count
                 max_a = a
 
         unknown = self.elicitation_situation["A"].copy()
